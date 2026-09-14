@@ -63,7 +63,7 @@
 
   label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; color:var(--navy-soft); }
   .field{ margin-bottom:20px; }
-  input[type="text"], input[type="file"]{
+  input[type="text"], input[type="file"], select{
     width:100%;
     padding:12px 14px;
     border-radius:12px;
@@ -73,7 +73,7 @@
     font-size:14.5px;
     color:var(--navy);
   }
-  input[type="text"]:focus{ outline:2px solid var(--orange-light); }
+  input[type="text"]:focus, select:focus{ outline:2px solid var(--orange-light); }
 
   .hint{ font-size:12.5px; color:#9a927f; margin-top:6px; }
 
@@ -96,8 +96,10 @@
     cursor:pointer;
     box-shadow:0 10px 24px -8px rgba(217,106,22,0.45);
     margin-top:8px;
+    transition: transform .2s ease, filter .2s ease;
   }
-  .btn-primary:disabled{ opacity:0.6; cursor:not-allowed; }
+  .btn-primary:hover{ transform:translateY(-2px); filter:brightness(1.03); }
+  .btn-primary:disabled{ opacity:0.6; cursor:not-allowed; transform:none; }
 
   .message{
     margin-top:16px;
@@ -147,7 +149,7 @@
 
       <div class="field">
         <label for="department">Department</label>
-        <select id="department" required style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--cream); font-family:'Inter', sans-serif; font-size:14.5px; color:var(--navy);">
+        <select id="department" required>
           <option value="" disabled selected>Select department</option>
           <option value="CSE">Computer Science &amp; Engineering</option>
           <option value="IT">Information Technology</option>
@@ -163,19 +165,18 @@
 
       <div class="field">
         <label for="section">Section</label>
-        <select id="section" required style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--cream); font-family:'Inter', sans-serif; font-size:14.5px; color:var(--navy);">
+        <select id="section" required>
           <option value="" disabled selected>Select section</option>
           <option value="A">A</option>
           <option value="B">B</option>
           <option value="C">C</option>
           <option value="D">D</option>
-          <option value="E">E</option>
         </select>
       </div>
 
       <div class="field">
         <label for="photos">Photos (minimum 3)</label>
-        <input type="file" id="photos" accept=".jpg,.jpeg,.png" multiple required>
+        <input type="file" id="photos" accept=".jpg,.jpeg,.png,.webp" multiple required>
         <div class="hint">Clear, well-lit, front-facing photos work best — different angles help accuracy.</div>
         <div class="preview" id="preview"></div>
       </div>
@@ -185,10 +186,11 @@
 
     <div class="message" id="message"></div>
 
-    <a href="Departments.HTML" class="back-link">&larr; Back to Departments</a>
+    <a href="Departments.html" class="back-link">&larr; Back to Departments</a>
   </div>
 
   <script>
+    const API_BASE = '/api';
     const form = document.getElementById('registerForm');
     const photosInput = document.getElementById('photos');
     const preview = document.getElementById('preview');
@@ -199,7 +201,7 @@
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     if (!token || role !== 'admin') {
-      window.location.href = 'attendx login.HTML';
+      window.location.href = 'Login.html';
     }
 
     // Show small thumbnails of selected photos
@@ -237,10 +239,10 @@
       Array.from(files).forEach(file => formData.append('photos', file));
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Registering...';
+      submitBtn.textContent = 'Registering & Extracting Face Embeddings...';
 
       try {
-        const response = await fetch('/api/register-person', {
+        const response = await fetch(`${API_BASE}/register-person`, {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + token
@@ -256,7 +258,7 @@
           form.reset();
           preview.innerHTML = '';
         } else {
-          messageBox.textContent = data.message;
+          messageBox.textContent = data.message || 'Registration failed.';
           messageBox.className = 'message error';
         }
       } catch (err) {

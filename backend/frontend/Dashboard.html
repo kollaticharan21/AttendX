@@ -344,7 +344,6 @@
   }
   .capture-btn:hover{ transform:scale(1.05); }
   .capture-btn:active{ transform:scale(0.95); }
-  .capture-btn.is-recording::after{ background:var(--danger); }
 
   .retake-btn, .use-photo-btn, .back-btn{
     padding:12px 22px;
@@ -420,7 +419,10 @@
   <div class="header">
     <h1 id="pageTitle">Dashboard</h1>
     <p class="sub" id="pageSub">Loading section details...</p>
-    <a href="Departments.HTML" class="back-link">&larr; Back to Departments</a>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:14px;">
+      <a href="Departments.html" class="back-link" style="margin-top:0;">&larr; Back to Departments</a>
+      <a href="Register.html" id="registerPersonLink" style="display:none; font-size:13.5px; font-weight:600; color:var(--orange); text-decoration:none; padding:6px 14px; border-radius:999px; background:var(--glass-fill); border:1px solid var(--glass-border);">+ Register New Person</a>
+    </div>
   </div>
 
   <div class="grid" id="peopleGrid"></div>
@@ -482,19 +484,6 @@
           </span>
         </button>
 
-        <button type="button" class="choice-option" id="chooseVideoBtn">
-          <span class="choice-icon">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="6" width="13" height="12" rx="2.2" stroke="currentColor" stroke-width="1.7"/>
-              <path d="M16.5 10.2 20 8v8l-3.5-2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span>
-            <p class="choice-text-title">Record a Video</p>
-            <p class="choice-text-sub">Pan across the room, auto-detects everyone</p>
-          </span>
-        </button>
-
         <p class="photo-queue-hint" id="queueHint">No photos selected yet — choose at least 1, up to 4.</p>
         <div class="photo-queue" id="photoQueue"></div>
 
@@ -526,30 +515,6 @@
         </div>
       </div>
 
-      <!-- Video recording screen: pan across the room for a few seconds -->
-      <div id="videoScreen" class="is-hidden">
-        <div class="camera-body">
-          <video class="camera-video" id="videoRecordPreview" autoplay playsinline muted></video>
-          <div class="camera-status" id="videoStatus">Requesting camera access…</div>
-        </div>
-        <p class="photo-queue-hint" id="videoTimerHint" style="text-align:center; margin:10px 0 0;">Slowly pan across the room. Recording stops automatically after 10s.</p>
-        <div class="camera-footer">
-          <button type="button" class="back-btn" id="videoBackBtn">Back</button>
-          <button type="button" class="capture-btn" id="videoRecordBtn" aria-label="Start recording"></button>
-        </div>
-      </div>
-
-      <!-- Review the recorded video before submitting -->
-      <div id="videoReviewScreen" class="is-hidden">
-        <div class="camera-body">
-          <video class="camera-video" id="videoReviewPlayer" controls playsinline></video>
-        </div>
-        <div class="camera-footer">
-          <button type="button" class="retake-btn" id="videoRetakeBtn">Retake</button>
-          <button type="button" class="use-photo-btn" id="useVideoBtn">Use Video</button>
-        </div>
-      </div>
-
       <!-- Result screen -->
       <div id="resultScreen" class="is-hidden">
         <div class="result-body" id="resultBody"></div>
@@ -573,13 +538,16 @@
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
+    if (isAdmin && document.getElementById('registerPersonLink')) {
+      document.getElementById('registerPersonLink').style.display = 'inline-block';
+    }
 
     function loadPeople() {
       grid.innerHTML = '';
       fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`)
         .then(res => res.json())
         .then(data => {
-          if (!data.success || data.people.length === 0) {
+          if (!data.success || !data.people || data.people.length === 0) {
             emptyState.style.display = 'block';
             return;
           }
@@ -669,7 +637,6 @@
         const mainScreen      = document.getElementById('mainScreen');
         const chooseCameraBtn = document.getElementById('chooseCameraBtn');
         const chooseGalleryBtn= document.getElementById('chooseGalleryBtn');
-        const chooseVideoBtn  = document.getElementById('chooseVideoBtn');
         const queueHint        = document.getElementById('queueHint');
         const photoQueueEl     = document.getElementById('photoQueue');
         const submitAttendanceBtn = document.getElementById('submitAttendanceBtn');
@@ -685,66 +652,27 @@
         const retakeBtn      = document.getElementById('retakeBtn');
         const usePhotoBtn    = document.getElementById('usePhotoBtn');
 
-        const videoScreen       = document.getElementById('videoScreen');
-        const videoRecordPreview= document.getElementById('videoRecordPreview');
-        const videoStatus       = document.getElementById('videoStatus');
-        const videoRecordBtn    = document.getElementById('videoRecordBtn');
-        const videoBackBtn      = document.getElementById('videoBackBtn');
-        const videoTimerHint    = document.getElementById('videoTimerHint');
-
-        const videoReviewScreen = document.getElementById('videoReviewScreen');
-        const videoReviewPlayer = document.getElementById('videoReviewPlayer');
-        const videoRetakeBtn    = document.getElementById('videoRetakeBtn');
-        const useVideoBtn       = document.getElementById('useVideoBtn');
-
         const resultScreen   = document.getElementById('resultScreen');
         const resultBody     = document.getElementById('resultBody');
 
         const galleryInput   = document.getElementById('galleryInput');
         const fab             = document.getElementById('attendanceFab');
 
-        const RECORD_SECONDS = 10;
-
         let stream = null;
         let photos = []; // { blob, previewUrl }
-        let mode = 'photos'; // 'photos' | 'video' — which submission path is active
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let recordedVideoBlob = null;
-        let recordedVideoUrl = null;
-        let recordTimeoutId = null;
 
         function showScreen(screen) {
-          [mainScreen, cameraScreen, reviewScreen, videoScreen, videoReviewScreen, resultScreen].forEach(s => s.classList.add('is-hidden'));
+          [mainScreen, cameraScreen, reviewScreen, resultScreen].forEach(s => s.classList.add('is-hidden'));
           screen.classList.remove('is-hidden');
         }
 
         function resetState() {
           photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
           photos = [];
-          mode = 'photos';
-          recordedVideoBlob = null;
-          if (recordedVideoUrl) {
-            URL.revokeObjectURL(recordedVideoUrl);
-            recordedVideoUrl = null;
-          }
           renderQueue();
         }
 
         function renderQueue() {
-          if (mode === 'video') {
-            photoQueueEl.innerHTML = '';
-            if (recordedVideoBlob) {
-              queueHint.innerHTML = `<strong>1</strong> video recorded (~${RECORD_SECONDS}s).`;
-            } else {
-              queueHint.innerHTML = 'No video recorded yet.';
-            }
-            chooseCameraBtn.disabled = false;
-            chooseGalleryBtn.disabled = false;
-            submitAttendanceBtn.disabled = !recordedVideoBlob;
-            return;
-          }
-
           photoQueueEl.innerHTML = '';
           photos.forEach((p, index) => {
             const thumb = document.createElement('div');
@@ -787,10 +715,6 @@
 
         function closeOverlay() {
           overlay.classList.remove('is-open');
-          if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-          clearTimeout(recordTimeoutId);
           stopCameraStream();
           resetState();
         }
@@ -803,11 +727,6 @@
         }
 
         async function openCamera() {
-          mode = 'photos';
-          if (recordedVideoBlob) {
-            recordedVideoBlob = null;
-            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
-          }
           overlayTitle.textContent = 'Take a Photo';
           showScreen(cameraScreen);
           statusEl.textContent = 'Requesting camera access…';
@@ -850,12 +769,7 @@
         }
 
         function openGallery() {
-          mode = 'photos';
-          if (recordedVideoBlob) {
-            recordedVideoBlob = null;
-            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
-          }
-          galleryInput.value = ''; // allows re-selecting the same file(s)
+          galleryInput.value = '';
           galleryInput.click();
         }
 
@@ -875,139 +789,7 @@
           renderQueue();
         }
 
-        // ---------------- Video recording (Record a Video option) ----------------
-
-        function pickRecorderMimeType() {
-          const candidates = [
-            'video/webm;codecs=vp9',
-            'video/webm;codecs=vp8',
-            'video/webm',
-            'video/mp4'
-          ];
-          return candidates.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
-        }
-
-        async function openVideoRecorder() {
-          mode = 'video';
-          photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
-          photos = [];
-          if (recordedVideoBlob) {
-            recordedVideoBlob = null;
-            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
-          }
-
-          overlayTitle.textContent = 'Record a Video';
-          showScreen(videoScreen);
-          videoStatus.textContent = 'Requesting camera access…';
-          videoStatus.classList.remove('is-hidden');
-          videoRecordBtn.classList.remove('is-hidden');
-          videoRecordBtn.classList.remove('is-recording');
-          videoTimerHint.textContent = `Slowly pan across the room. Recording stops automatically after ${RECORD_SECONDS}s.`;
-
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: 'environment' },
-              audio: false
-            });
-            videoRecordPreview.srcObject = stream;
-            videoStatus.classList.add('is-hidden');
-          } catch (err) {
-            console.error('Camera error:', err);
-            videoStatus.textContent = 'Camera access was denied or is unavailable.';
-            videoStatus.classList.remove('is-hidden');
-            videoRecordBtn.classList.add('is-hidden');
-          }
-        }
-
-        function startOrStopRecording() {
-          if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            return;
-          }
-          if (!stream) return;
-
-          recordedChunks = [];
-          const mimeType = pickRecorderMimeType();
-          try {
-            mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-          } catch (err) {
-            console.error('MediaRecorder error:', err);
-            videoStatus.textContent = 'Video recording is not supported in this browser.';
-            videoStatus.classList.remove('is-hidden');
-            return;
-          }
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = () => {
-            clearTimeout(recordTimeoutId);
-            const blobType = mediaRecorder.mimeType || 'video/webm';
-            recordedVideoBlob = new Blob(recordedChunks, { type: blobType });
-            recordedVideoUrl = URL.createObjectURL(recordedVideoBlob);
-            stopCameraStream();
-
-            videoReviewPlayer.src = recordedVideoUrl;
-            overlayTitle.textContent = 'Review Video';
-            showScreen(videoReviewScreen);
-          };
-
-          mediaRecorder.start();
-          videoRecordBtn.classList.add('is-recording');
-          videoTimerHint.textContent = `Recording… will stop automatically in ${RECORD_SECONDS}s. Tap the button to stop sooner.`;
-
-          recordTimeoutId = setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-            }
-          }, RECORD_SECONDS * 1000);
-        }
-
-        function retakeVideo() {
-          if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
-          recordedVideoBlob = null;
-          openVideoRecorder();
-        }
-
-        function useRecordedVideo() {
-          overlayTitle.textContent = 'Mark Attendance';
-          showScreen(mainScreen);
-          renderQueue();
-        }
-
         function submitAttendance() {
-          if (mode === 'video') {
-            if (!recordedVideoBlob) return;
-
-            submitAttendanceBtn.disabled = true;
-            submitAttendanceBtn.textContent = 'Submitting…';
-
-            const formData = new FormData();
-            formData.append('department', dept);
-            formData.append('section', section);
-            const ext = (recordedVideoBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
-            formData.append('video', recordedVideoBlob, `attendance.${ext}`);
-
-            fetch(`${API_BASE}/mark-attendance-video`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}` },
-              body: formData
-            })
-              .then(res => res.json())
-              .then(data => {
-                submitAttendanceBtn.disabled = false;
-                submitAttendanceBtn.textContent = 'Submit Attendance';
-                showResult(data);
-              })
-              .catch(() => {
-                submitAttendanceBtn.disabled = false;
-                submitAttendanceBtn.textContent = 'Submit Attendance';
-                showResult({ success: false, message: 'Could not reach the server.' });
-              });
-            return;
-          }
-
           if (photos.length < 1 || photos.length > MAX_PHOTOS) return;
 
           submitAttendanceBtn.disabled = true;
@@ -1059,14 +841,10 @@
                   <div class="result-stat-label">Absent</div>
                 </div>
               </div>
-              <p class="photo-queue-hint">Processed ${s.photos_processed != null ? s.photos_processed + ' photo(s)' : s.frames_processed + ' video frame(s)'} · ${s.unknown_faces} unrecognized face(s).</p>
-              ${s.present_list && s.present_list.length ? `
-                <p class="result-list-title">Present</p>
-                <p class="result-list">${s.present_list.map(p => `${p.name} (${p.reg_last4})`).join(', ')}</p>
-              ` : ''}
+              <p class="photo-queue-hint">Processed ${s.photos_processed} photo(s) · ${s.unknown_faces} unrecognized face(s).</p>
               ${s.absent_list && s.absent_list.length ? `
                 <p class="result-list-title">Absent</p>
-                <p class="result-list">${s.absent_list.map(p => `${p.name} (${p.reg_last4})`).join(', ')}</p>
+                <p class="result-list">${s.absent_list.join(', ')}</p>
               ` : ''}
               <button type="button" class="result-done-btn" id="resultDoneBtn" style="margin-top:16px;">Done</button>
             `;
@@ -1082,7 +860,6 @@
 
         chooseCameraBtn.addEventListener('click', openCamera);
         chooseGalleryBtn.addEventListener('click', openGallery);
-        chooseVideoBtn.addEventListener('click', openVideoRecorder);
         galleryInput.addEventListener('change', handleGalleryFiles);
 
         cameraBackBtn.addEventListener('click', () => {
@@ -1098,17 +875,6 @@
           openCamera();
         });
         usePhotoBtn.addEventListener('click', useCapturedPhoto);
-
-        videoBackBtn.addEventListener('click', () => {
-          stopCameraStream();
-          clearTimeout(recordTimeoutId);
-          overlayTitle.textContent = 'Mark Attendance';
-          showScreen(mainScreen);
-        });
-        videoRecordBtn.addEventListener('click', startOrStopRecording);
-        videoRetakeBtn.addEventListener('click', retakeVideo);
-        useVideoBtn.addEventListener('click', useRecordedVideo);
-
         submitAttendanceBtn.addEventListener('click', submitAttendance);
       })();
     }

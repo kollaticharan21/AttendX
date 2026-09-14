@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendX — Select Department</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#FAF9F6;
+    --cream:#FFFDF8;
+    --beige:#F5EFE6;
+    --orange:#D96A16;
+    --orange-light:#F08A3C;
+    --navy:#1F3A6D;
+    --navy-soft:#3A5382;
+    --border:#E8E8E8;
+    --glass-fill: rgba(255,255,255,0.42);
+    --glass-fill-strong: rgba(255,255,255,0.62);
+    --glass-border: rgba(255,255,255,0.75);
+    --shadow-soft: 0 20px 60px -20px rgba(31,58,109,0.18), 0 4px 16px -4px rgba(31,58,109,0.08);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'Inter', sans-serif;
+    color:var(--navy);
+    background:
+      radial-gradient(1100px 700px at 12% 8%, #FFFDF8 0%, transparent 60%),
+      radial-gradient(1200px 800px at 88% 92%, #F5EFE6 0%, transparent 55%),
+      linear-gradient(160deg, #FAF9F6 0%, #F7F2EA 45%, #F3ECE0 100%);
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+    padding-bottom:80px;
+  }
+
+  .crest-stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:0;
+  }
+  .fluted-crest{ width:min(58vw, 720px); height:min(58vw, 720px); position:relative; }
+  .fluted-crest svg{ width:100%; height:100%; opacity:0.05; }
+
+  .orb{ position:absolute; border-radius:50%; filter:blur(60px); opacity:0.3; z-index:0; }
+  .orb-1{ width:300px; height:300px; background:var(--orange-light); top:6%; left:4%; }
+  .orb-2{ width:260px; height:260px; background:var(--navy-soft); bottom:4%; right:6%; opacity:0.14; }
+
+  .topbar{
+    position:relative;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:32px 48px 0;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:11px;
+    background:linear-gradient(145deg, var(--navy) 0%, var(--navy-soft) 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px -4px rgba(31,58,109,0.35);
+  }
+  .brand-mark svg{ width:20px; height:20px; }
+  .brand-word{ font-family:'Outfit', sans-serif; font-weight:700; font-size:20px; color:var(--navy); }
+  .brand-word span{ color:var(--orange); }
+  .brand-sub{ font-size:11px; color:#8b8478; letter-spacing:0.08em; text-transform:uppercase; margin-top:-2px; }
+
+  .user-badge{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 18px;
+    border-radius:999px;
+    background:var(--glass-fill);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(20px);
+    font-size:13px;
+    color:var(--navy-soft);
+  }
+  .logout-link{ color:var(--orange); text-decoration:none; font-weight:600; cursor:pointer; }
+
+  .intro{
+    position:relative; z-index:2;
+    max-width:720px;
+    margin:56px auto 0;
+    padding:0 24px;
+    text-align:center;
+  }
+  .intro-eyebrow{
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--orange); font-weight:600; margin-bottom:12px;
+  }
+  .intro-title{
+    font-family:'Outfit', sans-serif;
+    font-size:34px; font-weight:700;
+    color:var(--navy); margin:0 0 12px;
+  }
+  .intro-sub{ font-size:15px; color:#7b7566; line-height:1.7; }
+
+  .dept-grid{
+    position:relative; z-index:2;
+    max-width:980px;
+    margin:40px auto 0;
+    padding:0 36px;
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:20px;
+  }
+  @media (max-width:768px){ .dept-grid{ grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width:520px){ .dept-grid{ grid-template-columns:1fr; } }
+
+  .dept-card{
+    position:relative;
+    border-radius:20px;
+    padding:26px 22px;
+    background:var(--glass-fill);
+    border:1px solid var(--border);
+    backdrop-filter:blur(20px);
+    box-shadow: 0 14px 34px -18px rgba(31,58,109,0.16);
+    cursor:pointer;
+    text-decoration:none;
+    color:inherit;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s ease, border-color .3s ease, background .3s ease;
+  }
+  .dept-card:hover{
+    transform:translateY(-5px);
+    box-shadow: 0 24px 44px -18px rgba(31,58,109,0.24);
+    border-color:rgba(217,106,22,0.35);
+    background:var(--glass-fill-strong);
+  }
+  .dept-code{
+    font-family:'Outfit', sans-serif;
+    font-size:24px; font-weight:800;
+    color:var(--orange);
+  }
+  .dept-name{
+    font-family:'Outfit', sans-serif;
+    font-size:15px; font-weight:600;
+    color:var(--navy);
+    line-height:1.3;
+  }
+</style>
+</head>
+<body>
+
+  <div class="crest-stage">
+    <div class="fluted-crest">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="92" fill="none" stroke="#1F3A6D" stroke-width="2"/>
+        <path d="M100 30 L118 70 L162 76 L130 106 L138 150 L100 128 L62 150 L70 106 L38 76 L82 70 Z" fill="#1F3A6D"/>
+        <text x="100" y="182" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" letter-spacing="2" fill="#1F3A6D">S.R.K.R ENGINEERING COLLEGE</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12l2 2 4-4" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="9" stroke="#FFFDF8" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-word">Attend<span>X</span></div>
+        <div class="brand-sub">S.R.K.R Engineering College</div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="Register.html" style="display:flex; align-items:center; gap:6px; padding:9px 18px; border-radius:999px; background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%); color:#fff; text-decoration:none; font-size:13px; font-weight:600; box-shadow:0 6px 16px -4px rgba(217,106,22,0.4); transition: transform .2s ease;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        <span>Register Person</span>
+      </a>
+
+      <div class="user-badge">
+        <span id="userName">Administrator</span>
+        <span>·</span>
+        <a class="logout-link" id="logoutBtn">Sign Out</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="intro">
+    <div class="intro-eyebrow">Academic Departments</div>
+    <h1 class="intro-title">Select Department</h1>
+    <p class="intro-sub">Choose a department to manage classroom rosters and mark attendance.</p>
+  </div>
+
+  <div class="dept-grid" id="deptGrid"></div>
+
+  <script>
+    const departments = [
+      { code: "CSE", name: "Computer Science & Engineering" },
+      { code: "IT", name: "Information Technology" },
+      { code: "ECE", name: "Electronics & Communication Engineering" },
+      { code: "EEE", name: "Electrical & Electronics Engineering" },
+      { code: "MECH", name: "Mechanical Engineering" },
+      { code: "CIVIL", name: "Civil Engineering" },
+      { code: "CSIT", name: "Computer Science & Information Technology" },
+      { code: "CSBS", name: "Computer Science & Business Systems" },
+      { code: "AIDS", name: "Artificial Intelligence & Data Science" }
+    ];
+
+    const grid = document.getElementById('deptGrid');
+    departments.forEach(dept => {
+      const card = document.createElement('a');
+      card.className = 'dept-card';
+      card.href = `Section.html?dept=${encodeURIComponent(dept.code)}`;
+      card.innerHTML = `
+        <div class="dept-code">${dept.code}</div>
+        <div class="dept-name">${dept.name}</div>
+      `;
+      grid.appendChild(card);
+    });
+
+    const storedName = localStorage.getItem('name') || localStorage.getItem('reg_number') || 'Administrator';
+    document.getElementById('userName').textContent = storedName;
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.clear();
+      window.location.href = 'Login.html';
+    });
+  </script>
+</body>
+</html>

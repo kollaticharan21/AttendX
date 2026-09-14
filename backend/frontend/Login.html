@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendX — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#FAF9F6;
+    --cream:#FFFDF8;
+    --beige:#F5EFE6;
+    --orange:#D96A16;
+    --orange-light:#F08A3C;
+    --navy:#1F3A6D;
+    --navy-soft:#3A5382;
+    --border:#E8E8E8;
+    --glass-fill: rgba(255,255,255,0.42);
+    --glass-fill-strong: rgba(255,255,255,0.68);
+    --glass-border: rgba(255,255,255,0.75);
+    --shadow-soft: 0 20px 60px -20px rgba(31,58,109,0.18), 0 4px 16px -4px rgba(31,58,109,0.08);
+    --danger:#C4432B;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'Inter', sans-serif;
+    color:var(--navy);
+    background:
+      radial-gradient(1100px 700px at 12% 8%, #FFFDF8 0%, transparent 60%),
+      radial-gradient(1200px 800px at 88% 92%, #F5EFE6 0%, transparent 55%),
+      linear-gradient(160deg, #FAF9F6 0%, #F7F2EA 45%, #F3ECE0 100%);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  .crest-stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:0;
+  }
+  .fluted-crest{ width:min(58vw, 720px); height:min(58vw, 720px); position:relative; }
+  .fluted-crest svg{ width:100%; height:100%; opacity:0.05; }
+
+  .orb{ position:absolute; border-radius:50%; filter:blur(60px); opacity:0.3; z-index:0; }
+  .orb-1{ width:300px; height:300px; background:var(--orange-light); top:8%; left:8%; }
+  .orb-2{ width:260px; height:260px; background:var(--navy-soft); bottom:6%; right:8%; opacity:0.14; }
+
+  .login-card{
+    position:relative;
+    z-index:2;
+    width:min(440px, 100%);
+    background:var(--glass-fill);
+    border:1px solid var(--glass-border);
+    border-radius:28px;
+    padding:42px 36px;
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    box-shadow:var(--shadow-soft);
+    animation: fadeIn 0.8s cubic-bezier(.16,1,.3,1) both;
+  }
+
+  .brand{ display:flex; align-items:center; gap:12px; margin-bottom:28px; justify-content:center; }
+  .brand-mark{
+    width:42px; height:42px; border-radius:12px;
+    background:linear-gradient(145deg, var(--navy) 0%, var(--navy-soft) 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px -4px rgba(31,58,109,0.35);
+  }
+  .brand-mark svg{ width:22px; height:22px; }
+  .brand-word{ font-family:'Outfit', sans-serif; font-weight:700; font-size:24px; color:var(--navy); }
+  .brand-word span{ color:var(--orange); }
+
+  .card-header{ text-align:center; margin-bottom:28px; }
+  h1{ font-family:'Outfit', sans-serif; font-size:26px; font-weight:700; margin:0 0 6px; }
+  .subtitle{ font-size:13.5px; color:#7b7566; margin:0; }
+
+  .form-group{ margin-bottom:20px; }
+  label{ display:block; font-size:12.5px; font-weight:600; color:var(--navy-soft); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em; }
+  input{
+    width:100%;
+    padding:13px 16px;
+    border-radius:14px;
+    border:1px solid var(--border);
+    background:var(--glass-fill-strong);
+    color:var(--navy);
+    font-family:'Inter', sans-serif;
+    font-size:14.5px;
+    outline:none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  input:focus{
+    border-color:var(--orange);
+    box-shadow:0 0 0 3px rgba(217,106,22,0.15);
+  }
+
+  .submit-btn{
+    width:100%;
+    padding:14px;
+    border-radius:999px;
+    border:none;
+    margin-top:10px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    cursor:pointer;
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+    color:#fff;
+    box-shadow:0 12px 24px -8px rgba(217,106,22,0.45);
+    transition: transform .2s ease, filter .2s ease;
+  }
+  .submit-btn:hover{ transform:translateY(-2px); filter:brightness(1.04); }
+  .submit-btn:disabled{ opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .error-box{
+    display:none;
+    padding:12px 16px;
+    border-radius:12px;
+    background:rgba(196,67,43,0.1);
+    border:1px solid rgba(196,67,43,0.3);
+    color:var(--danger);
+    font-size:13px;
+    margin-bottom:18px;
+    text-align:center;
+  }
+
+  .footer-note{ text-align:center; margin-top:24px; font-size:12px; color:#8b8478; }
+
+  @keyframes fadeIn{
+    from{ opacity:0; transform:translateY(16px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="crest-stage">
+    <div class="fluted-crest">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="92" fill="none" stroke="#1F3A6D" stroke-width="2"/>
+        <path d="M100 30 L118 70 L162 76 L130 106 L138 150 L100 128 L62 150 L70 106 L38 76 L82 70 Z" fill="#1F3A6D"/>
+        <text x="100" y="182" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" letter-spacing="2" fill="#1F3A6D">S.R.K.R ENGINEERING COLLEGE</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 12l2 2 4-4" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="9" stroke="#FFFDF8" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <div class="brand-word">Attend<span>X</span></div>
+    </div>
+
+    <div class="card-header">
+      <h1>Welcome Back</h1>
+      <p class="subtitle">S.R.K.R Engineering College Attendance Portal</p>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="regNumber">Registration Number / User ID</label>
+        <input type="text" id="regNumber" placeholder="e.g. ADMIN01 or 21B01A0501" required autofocus autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="submit-btn" id="loginBtn">Sign In</button>
+    </form>
+
+    <div class="footer-note">
+      Default Admin: <strong>ADMIN01</strong> / <strong>Admin@123</strong>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    const form = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorBox = document.getElementById('errorBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Signing in...';
+
+      const reg_number = document.getElementById('regNumber').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reg_number, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', data.role);
+          localStorage.setItem('reg_number', data.reg_number);
+          localStorage.setItem('name', data.name);
+          localStorage.setItem('department', data.department || '');
+          localStorage.setItem('section', data.section || '');
+
+          if (data.role === 'admin') {
+            window.location.href = 'Departments.html';
+          } else {
+            const dept = data.department || 'CSE';
+            const sec = data.section || 'A';
+            window.location.href = `Dashboard.html?dept=${encodeURIComponent(dept)}&section=${encodeURIComponent(sec)}`;
+          }
+        } else {
+          errorBox.textContent = data.message || 'Invalid credentials. Please try again.';
+          errorBox.style.display = 'block';
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Sign In';
+        }
+      } catch (err) {
+            errorBox.textContent = 'Could not reach the AttendX server.';
+        errorBox.style.display = 'block';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
