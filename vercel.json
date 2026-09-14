@@ -12,11 +12,11 @@
       "dest": "/api/index.py"
     },
     {
-      "handle": "filesystem"
+      "src": "/",
+      "dest": "/index.html"
     },
     {
-      "src": "/",
-      "dest": "/attendx%20login.HTML"
+      "handle": "filesystem"
     }
   ]
 }
