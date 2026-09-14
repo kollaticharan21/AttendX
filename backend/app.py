@@ -3,13 +3,11 @@ import io
 import uuid
 import tempfile
 import numpy as np
-import cv2
 from datetime import datetime, date
 from flask import Flask, request, jsonify, g, send_file, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from PIL import Image, ImageDraw, ImageFont
 
 from database import init_db, db_session, User, FaceEmbedding, AttendanceRecord
 from auth import generate_token, jwt_required, admin_required
@@ -533,6 +531,11 @@ def _extract_frames_from_video(video_path: str, max_frames: int = VIDEO_MAX_FRAM
     processed the same way multiple photos would be.
     Returns a list of BGR numpy frames.
     """
+    try:
+        import cv2
+    except ImportError:
+        raise RuntimeError("Video attendance requires OpenCV, which is not included in the Vercel deployment.")
+
     frames = []
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -583,6 +586,14 @@ def mark_attendance_video():
             "success": False,
             "message": f"Unsupported video format. Allowed: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
         }), 400
+
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        return jsonify({
+            "success": False,
+            "message": "Video attendance is unavailable in this deployment. Use photo attendance or run the full backend locally."
+        }), 503
 
     students, candidate_roster, error = _load_roster(dept, section)
     if error:

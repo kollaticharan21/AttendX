@@ -1,5 +1,4 @@
 import os
-import cv2
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Any
 
@@ -65,6 +64,7 @@ class FaceRecognitionEngine:
 
     def read_image_from_bytes(self, image_bytes: bytes) -> Optional[np.ndarray]:
         try:
+            import cv2
             nparr = np.frombuffer(image_bytes, np.uint8)
             return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         except Exception as e:
