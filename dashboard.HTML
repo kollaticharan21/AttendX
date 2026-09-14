@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendX — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#FAF9F6;
+    --cream:#FFFDF8;
+    --beige:#F5EFE6;
+    --orange:#D96A16;
+    --orange-light:#F08A3C;
+    --navy:#1F3A6D;
+    --navy-soft:#3A5382;
+    --border:#E8E8E8;
+    --glass-fill: rgba(255,255,255,0.42);
+    --glass-fill-strong: rgba(255,255,255,0.62);
+    --glass-border: rgba(255,255,255,0.75);
+    --shadow-soft: 0 20px 60px -20px rgba(31,58,109,0.18), 0 4px 16px -4px rgba(31,58,109,0.08);
+    --danger:#C4432B;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family:'Inter', sans-serif;
+    color:var(--navy);
+    background:
+      radial-gradient(1100px 700px at 12% 8%, #FFFDF8 0%, transparent 60%),
+      radial-gradient(1200px 800px at 88% 92%, #F5EFE6 0%, transparent 55%),
+      linear-gradient(160deg, #FAF9F6 0%, #F7F2EA 45%, #F3ECE0 100%);
+    min-height:100vh;
+    padding:60px 6vw 80px;
+  }
+
+  .brand{ display:flex; align-items:center; gap:12px; margin-bottom:36px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:11px;
+    background:linear-gradient(145deg, var(--navy) 0%, var(--navy-soft) 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px -4px rgba(31,58,109,0.35);
+  }
+  .brand-mark svg{ width:20px; height:20px; }
+  .brand-word{ font-family:'Outfit', sans-serif; font-weight:700; font-size:20px; color:var(--navy); }
+  .brand-word span{ color:var(--orange); }
+
+  .header{ margin-bottom:32px; }
+  h1{ font-family:'Outfit', sans-serif; font-size:30px; margin:0 0 6px; }
+  .sub{ color:#7b7566; font-size:14.5px; margin:0; }
+
+  .back-link{ display:inline-block; margin-top:14px; font-size:13.5px; color:var(--navy-soft); text-decoration:none; }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+    gap:20px;
+  }
+
+  .person-card{
+    position:relative;
+    background:var(--glass-fill);
+    border:1px solid var(--glass-border);
+    border-radius:18px;
+    padding:20px;
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    box-shadow:var(--shadow-soft);
+    text-align:center;
+  }
+  .person-card img{
+    width:88px; height:88px; border-radius:50%;
+    object-fit:cover; margin-bottom:14px;
+    border:2px solid var(--cream);
+    box-shadow:0 6px 16px -4px rgba(31,58,109,0.25);
+    background:var(--beige);
+  }
+  .person-name{ font-family:'Outfit', sans-serif; font-weight:600; font-size:16px; margin:0 0 4px; }
+  .person-reg{ font-size:13px; color:#8b8478; margin:0; }
+
+  /* ---------- Delete-person button (admin only) ---------- */
+  .delete-person-btn{
+    position:absolute;
+    top:10px; right:10px;
+    width:28px; height:28px;
+    border-radius:50%;
+    border:none;
+    background:var(--glass-fill-strong);
+    color:var(--danger);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background .2s ease, color .2s ease, transform .2s ease;
+  }
+  .delete-person-btn:hover{ background:var(--danger); color:#fff; transform:scale(1.06); }
+  .delete-person-btn svg{ width:14px; height:14px; }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:#9a927f;
+    font-size:14.5px;
+  }
+
+  /* ---------- Floating attendance button ---------- */
+  .attendance-fab-wrap{ display:none; }
+  .attendance-fab{
+    position:fixed;
+    right:32px;
+    bottom:32px;
+    z-index:50;
+    width:64px; height:64px;
+    border-radius:50%;
+    border:none;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+    color:#fff;
+    box-shadow:0 14px 30px -8px rgba(217,106,22,0.55), 0 4px 14px -2px rgba(217,106,22,0.3);
+    transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s ease, filter .25s ease;
+  }
+  .attendance-fab:hover{ transform:translateY(-3px) scale(1.04); filter:brightness(1.05); }
+  .attendance-fab:active{ transform:translateY(0) scale(0.97); }
+  .attendance-fab svg{ width:26px; height:26px; }
+
+  .attendance-fab-label{
+    position:fixed;
+    right:32px;
+    bottom:104px;
+    z-index:50;
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--navy-soft);
+    background:var(--glass-fill);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    padding:6px 12px;
+    border-radius:999px;
+    box-shadow:var(--shadow-soft);
+    pointer-events:none;
+    opacity:0;
+    transform:translateY(6px);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  .attendance-fab-wrap:hover .attendance-fab-label{ opacity:1; transform:translateY(0); }
+
+  @media (max-width:640px){
+    .attendance-fab{ right:20px; bottom:20px; width:58px; height:58px; }
+    .attendance-fab-label{ display:none; }
+  }
+
+  /* ---------- Shared dark overlay ---------- */
+  .attendance-overlay{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(20,28,46,0.6);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    padding:24px;
+  }
+  .attendance-overlay.is-open{ display:flex; }
+
+  .attendance-card{
+    position:relative;
+    width:min(440px, 100%);
+    max-height:90vh;
+    overflow-y:auto;
+    border-radius:26px;
+    background:var(--cream);
+    border:1px solid var(--glass-border);
+    box-shadow:var(--shadow-soft);
+    animation: attendanceIn 0.35s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes attendanceIn{
+    from{ opacity:0; transform:translateY(18px) scale(0.97); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  .attendance-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 22px;
+    border-bottom:1px solid var(--border);
+    position:sticky; top:0;
+    background:var(--cream);
+    z-index:1;
+  }
+  .attendance-title{
+    font-family:'Outfit', sans-serif;
+    font-size:16px; font-weight:700;
+    color:var(--navy);
+    margin:0;
+  }
+  .attendance-close{
+    width:30px; height:30px;
+    border-radius:50%;
+    border:none;
+    background:var(--beige);
+    color:var(--navy-soft);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background .2s ease, color .2s ease;
+  }
+  .attendance-close:hover{ background:var(--orange); color:#fff; }
+
+  /* ---------- Main screen: source choice + photo queue ---------- */
+  .choice-body{
+    padding:22px 22px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .choice-option{
+    display:flex; align-items:center; gap:14px;
+    padding:16px 18px;
+    border-radius:16px;
+    border:1px solid var(--border);
+    background:var(--glass-fill-strong);
+    cursor:pointer;
+    text-align:left;
+    font-family:'Inter', sans-serif;
+    transition: transform .25s cubic-bezier(.4,0,.2,1), border-color .25s ease, background .25s ease, opacity .25s ease;
+  }
+  .choice-option:hover{
+    transform:translateY(-2px);
+    border-color:rgba(217,106,22,0.4);
+    background:var(--cream);
+  }
+  .choice-option:disabled{
+    opacity:0.4; cursor:not-allowed; transform:none;
+  }
+  .choice-icon{
+    flex:0 0 auto;
+    width:42px; height:42px;
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(145deg, rgba(31,58,109,0.08), rgba(217,106,22,0.08));
+    color:var(--navy);
+  }
+  .choice-icon svg{ width:20px; height:20px; }
+  .choice-text-title{ font-size:14.5px; font-weight:600; color:var(--navy); margin:0 0 2px; }
+  .choice-text-sub{ font-size:12px; color:#8b8478; margin:0; }
+
+  .photo-queue-hint{
+    font-size:12.5px; color:#8b8478; margin:2px 2px 0;
+  }
+  .photo-queue-hint strong{ color:var(--navy); }
+
+  .photo-queue{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+  .photo-thumb{
+    position:relative;
+    border-radius:12px;
+    overflow:hidden;
+    aspect-ratio:1/1;
+    background:var(--beige);
+    border:1px solid var(--border);
+  }
+  .photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .photo-thumb-remove{
+    position:absolute; top:4px; right:4px;
+    width:20px; height:20px;
+    border-radius:50%;
+    border:none;
+    background:rgba(20,28,46,0.65);
+    color:#fff;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px;
+    line-height:1;
+  }
+  .photo-thumb-remove:hover{ background:var(--danger); }
+
+  .submit-attendance-btn{
+    padding:13px 22px;
+    border-radius:999px;
+    border:none;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+    color:#fff;
+    box-shadow:0 10px 22px -8px rgba(217,106,22,0.45);
+    transition: transform .2s ease, filter .2s ease, opacity .2s ease;
+  }
+  .submit-attendance-btn:hover{ transform:translateY(-2px); filter:brightness(1.03); }
+  .submit-attendance-btn:disabled{ opacity:0.45; cursor:not-allowed; transform:none; filter:none; }
+
+  /* ---------- Camera / review screen ---------- */
+  .camera-body{
+    position:relative;
+    background:#0d1420;
+    aspect-ratio:4/3;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .camera-video, .camera-canvas-preview{
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .camera-canvas-preview{ display:none; }
+
+  .camera-status{
+    position:absolute;
+    inset:0;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    padding:24px;
+    font-size:13.5px;
+    color:#d7dce6;
+    background:rgba(13,20,32,0.85);
+  }
+  .camera-status.is-hidden{ display:none; }
+
+  .camera-footer{
+    display:flex; align-items:center; justify-content:center;
+    gap:16px;
+    padding:20px 22px 24px;
+  }
+
+  .capture-btn{
+    width:60px; height:60px;
+    border-radius:50%;
+    border:3px solid var(--orange);
+    background:#fff;
+    cursor:pointer;
+    position:relative;
+    transition: transform .2s ease;
+  }
+  .capture-btn::after{
+    content:"";
+    position:absolute; inset:6px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+  }
+  .capture-btn:hover{ transform:scale(1.05); }
+  .capture-btn:active{ transform:scale(0.95); }
+  .capture-btn.is-recording::after{ background:var(--danger); }
+
+  .retake-btn, .use-photo-btn, .back-btn{
+    padding:12px 22px;
+    border-radius:999px;
+    border:none;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    transition: transform .2s ease, filter .2s ease;
+  }
+  .retake-btn, .back-btn{
+    background:var(--beige);
+    color:var(--navy);
+  }
+  .use-photo-btn{
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
+    color:#fff;
+    box-shadow:0 10px 22px -8px rgba(217,106,22,0.45);
+  }
+  .retake-btn:hover, .use-photo-btn:hover, .back-btn:hover{ transform:translateY(-2px); filter:brightness(1.03); }
+
+  /* ---------- Result screen ---------- */
+  .result-body{ padding:22px; }
+  .result-stats{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .result-stat{
+    border-radius:14px;
+    padding:14px;
+    background:var(--glass-fill-strong);
+    border:1px solid var(--border);
+    text-align:center;
+  }
+  .result-stat-num{ font-family:'Outfit', sans-serif; font-size:22px; font-weight:700; color:var(--navy); }
+  .result-stat-label{ font-size:11.5px; color:#8b8478; margin-top:2px; }
+  .result-list-title{ font-size:12.5px; font-weight:600; color:var(--navy); margin:14px 0 6px; }
+  .result-list{ font-size:13px; color:#5f5a4f; line-height:1.7; margin:0; }
+  .result-error{ font-size:13.5px; color:var(--danger); margin:0 0 14px; }
+  .result-done-btn{
+    width:100%;
+    padding:13px;
+    border-radius:14px;
+    border:none;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    background:var(--navy);
+    color:#fff;
+    transition: filter .2s ease;
+  }
+  .result-done-btn:hover{ filter:brightness(1.1); }
+
+  .is-hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 12l2 2 4-4" stroke="#FFFDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="9" stroke="#FFFDF8" stroke-width="1.6"/>
+      </svg>
+    </div>
+    <div class="brand-word">Attend<span>X</span></div>
+  </div>
+
+  <div class="header">
+    <h1 id="pageTitle">Dashboard</h1>
+    <p class="sub" id="pageSub">Loading section details...</p>
+    <a href="Departments.HTML" class="back-link">&larr; Back to Departments</a>
+  </div>
+
+  <div class="grid" id="peopleGrid"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    No one has been registered in this department/section yet.
+  </div>
+
+  <!-- ================= Take-attendance FAB (admin only) ================= -->
+  <div class="attendance-fab-wrap" id="attendanceFabWrap">
+    <span class="attendance-fab-label">Take Attendance</span>
+    <button type="button" class="attendance-fab" id="attendanceFab" aria-label="Take attendance">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.1l.9-1.5A1.5 1.5 0 0 1 9.79 4.7h4.42a1.5 1.5 0 0 1 1.29.8L16.4 7h2.1A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="1.7"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- hidden native file input used for gallery uploads (multi-select) -->
+  <input type="file" id="galleryInput" accept="image/*" multiple class="is-hidden">
+
+  <div class="attendance-overlay" id="attendanceOverlay">
+    <div class="attendance-card">
+      <div class="attendance-head">
+        <p class="attendance-title" id="overlayTitle">Mark Attendance</p>
+        <button type="button" class="attendance-close" id="overlayClose" aria-label="Close">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Main screen: choose a source, review queued photos (1-4), submit -->
+      <div class="choice-body" id="mainScreen">
+        <button type="button" class="choice-option" id="chooseCameraBtn">
+          <span class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.1l.9-1.5A1.5 1.5 0 0 1 9.79 4.7h4.42a1.5 1.5 0 0 1 1.29.8L16.4 7h2.1A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              <circle cx="12" cy="13" r="3.4" stroke="currentColor" stroke-width="1.7"/>
+            </svg>
+          </span>
+          <span>
+            <p class="choice-text-title">Take a Photo</p>
+            <p class="choice-text-sub">Use your camera right now</p>
+          </span>
+        </button>
+
+        <button type="button" class="choice-option" id="chooseGalleryBtn">
+          <span class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.7"/>
+              <circle cx="8.5" cy="9.5" r="1.6" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M5 16.5l4.2-4.2a1.6 1.6 0 0 1 2.26 0L15 15.8M13.8 14.6l1.6-1.6a1.6 1.6 0 0 1 2.26 0L19.5 14.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span>
+            <p class="choice-text-title">Upload from Gallery</p>
+            <p class="choice-text-sub">Pick 1–4 existing photos</p>
+          </span>
+        </button>
+
+        <button type="button" class="choice-option" id="chooseVideoBtn">
+          <span class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="13" height="12" rx="2.2" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M16.5 10.2 20 8v8l-3.5-2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>
+            <p class="choice-text-title">Record a Video</p>
+            <p class="choice-text-sub">Pan across the room, auto-detects everyone</p>
+          </span>
+        </button>
+
+        <p class="photo-queue-hint" id="queueHint">No photos selected yet — choose at least 1, up to 4.</p>
+        <div class="photo-queue" id="photoQueue"></div>
+
+        <button type="button" class="submit-attendance-btn" id="submitAttendanceBtn" disabled>
+          Submit Attendance
+        </button>
+      </div>
+
+      <!-- Camera capture screen -->
+      <div id="cameraScreen" class="is-hidden">
+        <div class="camera-body">
+          <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
+          <div class="camera-status" id="cameraStatus">Requesting camera access…</div>
+        </div>
+        <div class="camera-footer">
+          <button type="button" class="back-btn" id="cameraBackBtn">Back</button>
+          <button type="button" class="capture-btn" id="captureBtn" aria-label="Capture photo"></button>
+        </div>
+      </div>
+
+      <!-- Review a single just-captured photo before adding it to the queue -->
+      <div id="reviewScreen" class="is-hidden">
+        <div class="camera-body">
+          <canvas class="camera-canvas-preview" id="cameraCanvas" style="display:block;"></canvas>
+        </div>
+        <div class="camera-footer">
+          <button type="button" class="retake-btn" id="retakeBtn">Retake</button>
+          <button type="button" class="use-photo-btn" id="usePhotoBtn">Use Photo</button>
+        </div>
+      </div>
+
+      <!-- Video recording screen: pan across the room for a few seconds -->
+      <div id="videoScreen" class="is-hidden">
+        <div class="camera-body">
+          <video class="camera-video" id="videoRecordPreview" autoplay playsinline muted></video>
+          <div class="camera-status" id="videoStatus">Requesting camera access…</div>
+        </div>
+        <p class="photo-queue-hint" id="videoTimerHint" style="text-align:center; margin:10px 0 0;">Slowly pan across the room. Recording stops automatically after 10s.</p>
+        <div class="camera-footer">
+          <button type="button" class="back-btn" id="videoBackBtn">Back</button>
+          <button type="button" class="capture-btn" id="videoRecordBtn" aria-label="Start recording"></button>
+        </div>
+      </div>
+
+      <!-- Review the recorded video before submitting -->
+      <div id="videoReviewScreen" class="is-hidden">
+        <div class="camera-body">
+          <video class="camera-video" id="videoReviewPlayer" controls playsinline></video>
+        </div>
+        <div class="camera-footer">
+          <button type="button" class="retake-btn" id="videoRetakeBtn">Retake</button>
+          <button type="button" class="use-photo-btn" id="useVideoBtn">Use Video</button>
+        </div>
+      </div>
+
+      <!-- Result screen -->
+      <div id="resultScreen" class="is-hidden">
+        <div class="result-body" id="resultBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:5000';
+    const MAX_PHOTOS = 4;
+
+    const params = new URLSearchParams(window.location.search);
+    const dept = params.get('dept');
+    const section = params.get('section');
+
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSub = document.getElementById('pageSub');
+    const grid = document.getElementById('peopleGrid');
+    const emptyState = document.getElementById('emptyState');
+
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const isAdmin = role === 'admin';
+
+    function loadPeople() {
+      grid.innerHTML = '';
+      fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || data.people.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+          }
+          emptyState.style.display = 'none';
+
+          data.people.forEach(person => {
+            const card = document.createElement('div');
+            card.className = 'person-card';
+            card.innerHTML = `
+              ${isAdmin ? `
+                <button type="button" class="delete-person-btn" data-id="${person.id}" data-name="${person.name}" aria-label="Delete ${person.name}">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 7h14M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7m2 0-.7 12.1A2 2 0 0 1 14.3 21H9.7a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              ` : ''}
+              <img src="${API_BASE}/photo/${encodeURIComponent(person.name)}"
+                   onerror="this.src='https://via.placeholder.com/88?text=No+Photo'"
+                   alt="${person.name}">
+              <p class="person-name">${person.name}</p>
+              <p class="person-reg">${person.reg_number || ''}</p>
+            `;
+            grid.appendChild(card);
+          });
+
+          if (isAdmin) {
+            grid.querySelectorAll('.delete-person-btn').forEach(btn => {
+              btn.addEventListener('click', handleDeletePerson);
+            });
+          }
+        })
+        .catch(() => {
+          pageSub.textContent = 'Could not reach the server. Is app.py running?';
+        });
+    }
+
+    function handleDeletePerson(e) {
+      const btn = e.currentTarget;
+      const personId = btn.getAttribute('data-id');
+      const personName = btn.getAttribute('data-name');
+
+      if (!confirm(`Remove ${personName} from the roster? This deletes their photos and face data too.`)) {
+        return;
+      }
+
+      btn.disabled = true;
+
+      fetch(`${API_BASE}/person/${personId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            loadPeople();
+          } else {
+            alert(data.message || 'Could not delete this person.');
+            btn.disabled = false;
+          }
+        })
+        .catch(() => {
+          alert('Could not reach the server.');
+          btn.disabled = false;
+        });
+    }
+
+    if (!dept || !section) {
+      pageTitle.textContent = 'No section selected';
+      pageSub.textContent = 'Please go back and choose a department and section first.';
+    } else {
+      pageTitle.textContent = `${dept} — Section ${section}`;
+      pageSub.textContent = 'Registered students in this section.';
+      loadPeople();
+    }
+
+    // ============================================================
+    // Take-attendance overlay (admin only)
+    // ============================================================
+    if (isAdmin && dept && section) {
+      document.getElementById('attendanceFabWrap').style.display = 'block';
+
+      (function () {
+        const overlay        = document.getElementById('attendanceOverlay');
+        const overlayClose   = document.getElementById('overlayClose');
+        const overlayTitle   = document.getElementById('overlayTitle');
+
+        const mainScreen      = document.getElementById('mainScreen');
+        const chooseCameraBtn = document.getElementById('chooseCameraBtn');
+        const chooseGalleryBtn= document.getElementById('chooseGalleryBtn');
+        const chooseVideoBtn  = document.getElementById('chooseVideoBtn');
+        const queueHint        = document.getElementById('queueHint');
+        const photoQueueEl     = document.getElementById('photoQueue');
+        const submitAttendanceBtn = document.getElementById('submitAttendanceBtn');
+
+        const cameraScreen   = document.getElementById('cameraScreen');
+        const video          = document.getElementById('cameraVideo');
+        const statusEl       = document.getElementById('cameraStatus');
+        const captureBtn     = document.getElementById('captureBtn');
+        const cameraBackBtn  = document.getElementById('cameraBackBtn');
+
+        const reviewScreen   = document.getElementById('reviewScreen');
+        const canvas         = document.getElementById('cameraCanvas');
+        const retakeBtn      = document.getElementById('retakeBtn');
+        const usePhotoBtn    = document.getElementById('usePhotoBtn');
+
+        const videoScreen       = document.getElementById('videoScreen');
+        const videoRecordPreview= document.getElementById('videoRecordPreview');
+        const videoStatus       = document.getElementById('videoStatus');
+        const videoRecordBtn    = document.getElementById('videoRecordBtn');
+        const videoBackBtn      = document.getElementById('videoBackBtn');
+        const videoTimerHint    = document.getElementById('videoTimerHint');
+
+        const videoReviewScreen = document.getElementById('videoReviewScreen');
+        const videoReviewPlayer = document.getElementById('videoReviewPlayer');
+        const videoRetakeBtn    = document.getElementById('videoRetakeBtn');
+        const useVideoBtn       = document.getElementById('useVideoBtn');
+
+        const resultScreen   = document.getElementById('resultScreen');
+        const resultBody     = document.getElementById('resultBody');
+
+        const galleryInput   = document.getElementById('galleryInput');
+        const fab             = document.getElementById('attendanceFab');
+
+        const RECORD_SECONDS = 10;
+
+        let stream = null;
+        let photos = []; // { blob, previewUrl }
+        let mode = 'photos'; // 'photos' | 'video' — which submission path is active
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedVideoBlob = null;
+        let recordedVideoUrl = null;
+        let recordTimeoutId = null;
+
+        function showScreen(screen) {
+          [mainScreen, cameraScreen, reviewScreen, videoScreen, videoReviewScreen, resultScreen].forEach(s => s.classList.add('is-hidden'));
+          screen.classList.remove('is-hidden');
+        }
+
+        function resetState() {
+          photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+          photos = [];
+          mode = 'photos';
+          recordedVideoBlob = null;
+          if (recordedVideoUrl) {
+            URL.revokeObjectURL(recordedVideoUrl);
+            recordedVideoUrl = null;
+          }
+          renderQueue();
+        }
+
+        function renderQueue() {
+          if (mode === 'video') {
+            photoQueueEl.innerHTML = '';
+            if (recordedVideoBlob) {
+              queueHint.innerHTML = `<strong>1</strong> video recorded (~${RECORD_SECONDS}s).`;
+            } else {
+              queueHint.innerHTML = 'No video recorded yet.';
+            }
+            chooseCameraBtn.disabled = false;
+            chooseGalleryBtn.disabled = false;
+            submitAttendanceBtn.disabled = !recordedVideoBlob;
+            return;
+          }
+
+          photoQueueEl.innerHTML = '';
+          photos.forEach((p, index) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumb';
+            thumb.innerHTML = `
+              <img src="${p.previewUrl}" alt="Photo ${index + 1}">
+              <button type="button" class="photo-thumb-remove" data-index="${index}" aria-label="Remove photo">✕</button>
+            `;
+            photoQueueEl.appendChild(thumb);
+          });
+
+          photoQueueEl.querySelectorAll('.photo-thumb-remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.getAttribute('data-index'), 10);
+              URL.revokeObjectURL(photos[idx].previewUrl);
+              photos.splice(idx, 1);
+              renderQueue();
+            });
+          });
+
+          const count = photos.length;
+          if (count === 0) {
+            queueHint.innerHTML = 'No photos selected yet — choose at least 1, up to 4.';
+          } else {
+            queueHint.innerHTML = `<strong>${count}</strong> of ${MAX_PHOTOS} photo(s) selected.`;
+          }
+
+          const atMax = count >= MAX_PHOTOS;
+          chooseCameraBtn.disabled = atMax;
+          chooseGalleryBtn.disabled = atMax;
+          submitAttendanceBtn.disabled = count < 1 || count > MAX_PHOTOS;
+        }
+
+        function openOverlay() {
+          overlay.classList.add('is-open');
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+          renderQueue();
+        }
+
+        function closeOverlay() {
+          overlay.classList.remove('is-open');
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+          clearTimeout(recordTimeoutId);
+          stopCameraStream();
+          resetState();
+        }
+
+        function stopCameraStream() {
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+          }
+        }
+
+        async function openCamera() {
+          mode = 'photos';
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
+          overlayTitle.textContent = 'Take a Photo';
+          showScreen(cameraScreen);
+          statusEl.textContent = 'Requesting camera access…';
+          statusEl.classList.remove('is-hidden');
+          captureBtn.classList.remove('is-hidden');
+
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' },
+              audio: false
+            });
+            video.srcObject = stream;
+            statusEl.classList.add('is-hidden');
+          } catch (err) {
+            console.error('Camera error:', err);
+            statusEl.textContent = 'Camera access was denied or is unavailable. Please allow camera permission, or use "Upload from Gallery" instead.';
+            statusEl.classList.remove('is-hidden');
+            captureBtn.classList.add('is-hidden');
+          }
+        }
+
+        function capturePhoto() {
+          const ctx = canvas.getContext('2d');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          stopCameraStream();
+          overlayTitle.textContent = 'Review Photo';
+          showScreen(reviewScreen);
+        }
+
+        function useCapturedPhoto() {
+          canvas.toBlob(blob => {
+            if (!blob) return;
+            photos.push({ blob, previewUrl: URL.createObjectURL(blob) });
+            overlayTitle.textContent = 'Mark Attendance';
+            showScreen(mainScreen);
+            renderQueue();
+          }, 'image/jpeg', 0.9);
+        }
+
+        function openGallery() {
+          mode = 'photos';
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
+          galleryInput.value = ''; // allows re-selecting the same file(s)
+          galleryInput.click();
+        }
+
+        function handleGalleryFiles(e) {
+          const files = Array.from(e.target.files || []);
+          if (files.length === 0) return;
+
+          const remaining = MAX_PHOTOS - photos.length;
+          if (files.length > remaining) {
+            alert(`You can add ${remaining} more photo(s) — the first ${remaining} you picked will be used.`);
+          }
+
+          files.slice(0, remaining).forEach(file => {
+            photos.push({ blob: file, previewUrl: URL.createObjectURL(file) });
+          });
+
+          renderQueue();
+        }
+
+        // ---------------- Video recording (Record a Video option) ----------------
+
+        function pickRecorderMimeType() {
+          const candidates = [
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm',
+            'video/mp4'
+          ];
+          return candidates.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+        }
+
+        async function openVideoRecorder() {
+          mode = 'video';
+          photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+          photos = [];
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
+
+          overlayTitle.textContent = 'Record a Video';
+          showScreen(videoScreen);
+          videoStatus.textContent = 'Requesting camera access…';
+          videoStatus.classList.remove('is-hidden');
+          videoRecordBtn.classList.remove('is-hidden');
+          videoRecordBtn.classList.remove('is-recording');
+          videoTimerHint.textContent = `Slowly pan across the room. Recording stops automatically after ${RECORD_SECONDS}s.`;
+
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment' },
+              audio: false
+            });
+            videoRecordPreview.srcObject = stream;
+            videoStatus.classList.add('is-hidden');
+          } catch (err) {
+            console.error('Camera error:', err);
+            videoStatus.textContent = 'Camera access was denied or is unavailable.';
+            videoStatus.classList.remove('is-hidden');
+            videoRecordBtn.classList.add('is-hidden');
+          }
+        }
+
+        function startOrStopRecording() {
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            return;
+          }
+          if (!stream) return;
+
+          recordedChunks = [];
+          const mimeType = pickRecorderMimeType();
+          try {
+            mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+          } catch (err) {
+            console.error('MediaRecorder error:', err);
+            videoStatus.textContent = 'Video recording is not supported in this browser.';
+            videoStatus.classList.remove('is-hidden');
+            return;
+          }
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            clearTimeout(recordTimeoutId);
+            const blobType = mediaRecorder.mimeType || 'video/webm';
+            recordedVideoBlob = new Blob(recordedChunks, { type: blobType });
+            recordedVideoUrl = URL.createObjectURL(recordedVideoBlob);
+            stopCameraStream();
+
+            videoReviewPlayer.src = recordedVideoUrl;
+            overlayTitle.textContent = 'Review Video';
+            showScreen(videoReviewScreen);
+          };
+
+          mediaRecorder.start();
+          videoRecordBtn.classList.add('is-recording');
+          videoTimerHint.textContent = `Recording… will stop automatically in ${RECORD_SECONDS}s. Tap the button to stop sooner.`;
+
+          recordTimeoutId = setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+              mediaRecorder.stop();
+            }
+          }, RECORD_SECONDS * 1000);
+        }
+
+        function retakeVideo() {
+          if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          recordedVideoBlob = null;
+          openVideoRecorder();
+        }
+
+        function useRecordedVideo() {
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+          renderQueue();
+        }
+
+        function submitAttendance() {
+          if (mode === 'video') {
+            if (!recordedVideoBlob) return;
+
+            submitAttendanceBtn.disabled = true;
+            submitAttendanceBtn.textContent = 'Submitting…';
+
+            const formData = new FormData();
+            formData.append('department', dept);
+            formData.append('section', section);
+            const ext = (recordedVideoBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
+            formData.append('video', recordedVideoBlob, `attendance.${ext}`);
+
+            fetch(`${API_BASE}/mark-attendance-video`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+              body: formData
+            })
+              .then(res => res.json())
+              .then(data => {
+                submitAttendanceBtn.disabled = false;
+                submitAttendanceBtn.textContent = 'Submit Attendance';
+                showResult(data);
+              })
+              .catch(() => {
+                submitAttendanceBtn.disabled = false;
+                submitAttendanceBtn.textContent = 'Submit Attendance';
+                showResult({ success: false, message: 'Could not reach the server.' });
+              });
+            return;
+          }
+
+          if (photos.length < 1 || photos.length > MAX_PHOTOS) return;
+
+          submitAttendanceBtn.disabled = true;
+          submitAttendanceBtn.textContent = 'Submitting…';
+
+          const formData = new FormData();
+          formData.append('department', dept);
+          formData.append('section', section);
+          photos.forEach((p, index) => {
+            formData.append('photos', p.blob, `attendance${index + 1}.jpg`);
+          });
+
+          fetch(`${API_BASE}/mark-attendance`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+          })
+            .then(res => res.json())
+            .then(data => {
+              submitAttendanceBtn.disabled = false;
+              submitAttendanceBtn.textContent = 'Submit Attendance';
+              showResult(data);
+            })
+            .catch(() => {
+              submitAttendanceBtn.disabled = false;
+              submitAttendanceBtn.textContent = 'Submit Attendance';
+              showResult({ success: false, message: 'Could not reach the server.' });
+            });
+        }
+
+        function showResult(data) {
+          overlayTitle.textContent = data.success ? 'Attendance Marked ✓' : 'Something went wrong';
+
+          if (!data.success) {
+            resultBody.innerHTML = `
+              <p class="result-error">${data.message || 'The attendance photo(s) could not be processed.'}</p>
+              <button type="button" class="result-done-btn" id="resultDoneBtn">Close</button>
+            `;
+          } else {
+            const s = data.summary;
+            resultBody.innerHTML = `
+              <div class="result-stats">
+                <div class="result-stat">
+                  <div class="result-stat-num">${s.present_count}</div>
+                  <div class="result-stat-label">Present</div>
+                </div>
+                <div class="result-stat">
+                  <div class="result-stat-num">${s.absent_count}</div>
+                  <div class="result-stat-label">Absent</div>
+                </div>
+              </div>
+              <p class="photo-queue-hint">Processed ${s.photos_processed != null ? s.photos_processed + ' photo(s)' : s.frames_processed + ' video frame(s)'} · ${s.unknown_faces} unrecognized face(s).</p>
+              ${s.present_list && s.present_list.length ? `
+                <p class="result-list-title">Present</p>
+                <p class="result-list">${s.present_list.map(p => `${p.name} (${p.reg_last4})`).join(', ')}</p>
+              ` : ''}
+              ${s.absent_list && s.absent_list.length ? `
+                <p class="result-list-title">Absent</p>
+                <p class="result-list">${s.absent_list.map(p => `${p.name} (${p.reg_last4})`).join(', ')}</p>
+              ` : ''}
+              <button type="button" class="result-done-btn" id="resultDoneBtn" style="margin-top:16px;">Done</button>
+            `;
+          }
+
+          showScreen(resultScreen);
+          document.getElementById('resultDoneBtn').addEventListener('click', closeOverlay);
+        }
+
+        fab.addEventListener('click', openOverlay);
+        overlayClose.addEventListener('click', closeOverlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+
+        chooseCameraBtn.addEventListener('click', openCamera);
+        chooseGalleryBtn.addEventListener('click', openGallery);
+        chooseVideoBtn.addEventListener('click', openVideoRecorder);
+        galleryInput.addEventListener('change', handleGalleryFiles);
+
+        cameraBackBtn.addEventListener('click', () => {
+          stopCameraStream();
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+        });
+
+        captureBtn.addEventListener('click', capturePhoto);
+        retakeBtn.addEventListener('click', () => {
+          overlayTitle.textContent = 'Take a Photo';
+          showScreen(cameraScreen);
+          openCamera();
+        });
+        usePhotoBtn.addEventListener('click', useCapturedPhoto);
+
+        videoBackBtn.addEventListener('click', () => {
+          stopCameraStream();
+          clearTimeout(recordTimeoutId);
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+        });
+        videoRecordBtn.addEventListener('click', startOrStopRecording);
+        videoRetakeBtn.addEventListener('click', retakeVideo);
+        useVideoBtn.addEventListener('click', useRecordedVideo);
+
+        submitAttendanceBtn.addEventListener('click', submitAttendance);
+      })();
+    }
+  </script>
+
+</body>
+</html>
