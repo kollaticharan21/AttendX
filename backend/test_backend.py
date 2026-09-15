@@ -20,6 +20,9 @@ from face_engine import face_engine, FaceRecognitionEngine
 @pytest.fixture(scope="module")
 def test_client():
     app.config["TESTING"] = True
+    db_session.remove()
+    if os.path.exists("test_attendx.db"):
+        os.remove("test_attendx.db")
     with app.test_client() as client:
         with app.app_context():
             init_db()
@@ -96,8 +99,14 @@ class TestStudentManagement:
         assert data["success"] is True
         assert data["user"]["reg_number"] == "21B01A0599"
 
-    def test_register_person_multiple_photos(self, test_client):
+    def test_register_person_multiple_photos(self, test_client, monkeypatch):
         img_bytes = create_dummy_image_bytes()
+        embedding = np.ones(512, dtype=np.float32)
+        monkeypatch.setattr(
+            face_engine,
+            "extract_faces",
+            lambda image: [{"score": 1.0, "embedding": embedding}],
+        )
         res = test_client.post(
             "/register-person",
             headers={"Authorization": f"Bearer {self.admin_token}"},
