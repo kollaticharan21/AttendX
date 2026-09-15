@@ -18,7 +18,8 @@ from werkzeug.security import generate_password_hash
 
 Base = declarative_base()
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///attendx.db")
+DEFAULT_DATABASE_URL = "sqlite:////tmp/attendx.db" if os.environ.get("VERCEL") else "sqlite:///attendx.db"
+DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
