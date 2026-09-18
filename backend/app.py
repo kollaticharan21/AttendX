@@ -19,7 +19,13 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configuration & Directories
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-STORAGE_DIR = os.path.join(BASE_DIR, "storage")
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+
+if os.environ.get("VERCEL"):
+    STORAGE_DIR = os.path.join(tempfile.gettempdir(), "attendx_storage")
+else:
+    STORAGE_DIR = os.path.join(BASE_DIR, "storage")
+
 PROFILES_DIR = os.path.join(STORAGE_DIR, "profiles")
 ATTENDANCE_DIR = os.path.join(STORAGE_DIR, "attendance")
 
@@ -52,6 +58,7 @@ def shutdown_session(exception=None):
 # HEALTH & STATUS
 # ============================================================================
 @app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
 def health_check():
     return jsonify({
         "status": "healthy",
@@ -70,6 +77,7 @@ def health_check():
 # 1. AUTHENTICATION: POST /login
 # ============================================================================
 @app.route("/login", methods=["POST"])
+@app.route("/api/login", methods=["POST"])
 def login():
     """
     Accepts: { "reg_number": "...", "password": "..." }
@@ -111,6 +119,7 @@ def login():
 # 2. ROSTER: GET /people?department=CSE&section=A
 # ============================================================================
 @app.route("/people", methods=["GET"])
+@app.route("/api/people", methods=["GET"])
 def get_people():
     """
     Returns JSON list of all students registered under the selected department and section.
@@ -153,6 +162,7 @@ def get_people():
 # 3. PHOTO SERVING: GET /photo/<person_name_or_id>
 # ============================================================================
 @app.route("/photo/<person_name_or_id>", methods=["GET"])
+@app.route("/api/photo/<person_name_or_id>", methods=["GET"])
 def get_photo(person_name_or_id: str):
     """
     Serves the registered user's profile picture from server storage.
@@ -177,6 +187,10 @@ def get_photo(person_name_or_id: str):
 
     if user and user.profile_photo_path:
         full_photo_path = os.path.join(PROFILES_DIR, user.profile_photo_path)
+        if not os.path.exists(full_photo_path):
+            repo_path = os.path.join(BASE_DIR, "storage", "profiles", user.profile_photo_path)
+            if os.path.exists(repo_path):
+                full_photo_path = repo_path
         if os.path.exists(full_photo_path):
             return send_file(full_photo_path)
 
@@ -200,6 +214,7 @@ def get_photo(person_name_or_id: str):
 # 4. DELETE PERSON: DELETE /person/<person_id> [Admin Authorization Required]
 # ============================================================================
 @app.route("/person/<int:person_id>", methods=["DELETE"])
+@app.route("/api/person/<int:person_id>", methods=["DELETE"])
 @admin_required
 def delete_person(person_id: int):
     """
@@ -234,7 +249,9 @@ def delete_person(person_id: int):
 # 5. REGISTER PERSON / STUDENT: POST /register-person & POST /register-student
 # ============================================================================
 @app.route("/register-person", methods=["POST"])
+@app.route("/api/register-person", methods=["POST"])
 @app.route("/register-student", methods=["POST"])
+@app.route("/api/register-student", methods=["POST"])
 @admin_required
 def register_student():
     """
@@ -457,6 +474,7 @@ def _finalize_attendance(dept, section, students, candidate_roster, all_detected
 # 6. MARK ATTENDANCE (PHOTOS): POST /mark-attendance [Admin Authorization Required]
 # ============================================================================
 @app.route("/mark-attendance", methods=["POST"])
+@app.route("/api/mark-attendance", methods=["POST"])
 @admin_required
 def mark_attendance():
     """
@@ -562,6 +580,7 @@ def _extract_frames_from_video(video_path: str, max_frames: int = VIDEO_MAX_FRAM
 
 
 @app.route("/mark-attendance-video", methods=["POST"])
+@app.route("/api/mark-attendance-video", methods=["POST"])
 @admin_required
 def mark_attendance_video():
     """
@@ -649,6 +668,7 @@ def mark_attendance_video():
 # 7. ATTENDANCE HISTORY: GET /attendance-history
 # ============================================================================
 @app.route("/attendance-history", methods=["GET"])
+@app.route("/api/attendance-history", methods=["GET"])
 @jwt_required
 def get_attendance_history():
     """
@@ -677,6 +697,27 @@ def get_attendance_history():
         "success": True,
         "records": [r.to_dict() for r in records]
     })
+
+
+# ============================================================================
+# 8. STATIC FRONTEND SERVING (Vercel & Local)
+# ============================================================================
+@app.route("/", methods=["GET"])
+def serve_index():
+    return send_from_directory(ROOT_DIR, "index.html")
+
+
+@app.route("/<path:filename>", methods=["GET"])
+def serve_static(filename):
+    file_path = os.path.join(ROOT_DIR, filename)
+    if os.path.isfile(file_path):
+        return send_from_directory(ROOT_DIR, filename)
+    # Case-insensitive fallback (handles e.g. Departments.HTML vs departments.html)
+    lower_target = filename.lower()
+    for f in os.listdir(ROOT_DIR):
+        if f.lower() == lower_target and os.path.isfile(os.path.join(ROOT_DIR, f)):
+            return send_from_directory(ROOT_DIR, f)
+    return jsonify({"error": "File not found", "path": filename}), 404
 
 
 # ============================================================================

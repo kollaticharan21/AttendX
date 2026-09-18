@@ -16,9 +16,24 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, scoped_session
 from werkzeug.security import generate_password_hash
 
+import tempfile
+import shutil
+
 Base = declarative_base()
 
-DEFAULT_DATABASE_URL = "sqlite:////tmp/attendx.db" if os.environ.get("VERCEL") else "sqlite:///attendx.db"
+if os.environ.get("VERCEL"):
+    tmp_dir = tempfile.gettempdir()
+    tmp_db = os.path.join(tmp_dir, "attendx.db")
+    seed_db = os.path.join(os.path.abspath(os.path.dirname(__file__)), "attendx.db")
+    if os.path.exists(seed_db) and not os.path.exists(tmp_db):
+        try:
+            shutil.copy2(seed_db, tmp_db)
+        except Exception as _e:
+            pass
+    DEFAULT_DATABASE_URL = f"sqlite:///{tmp_db.replace(chr(92), '/')}"
+else:
+    DEFAULT_DATABASE_URL = "sqlite:///attendx.db"
+
 DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 connect_args = {}

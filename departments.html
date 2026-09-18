@@ -630,9 +630,8 @@
           <span class="dept-arrow">${arrowSvg}</span>
         </div>
       `;
-      card.addEventListener('click', (e) => {
-        // Placeholder: route to the department's dashboard
-        window.location.href='${dept.code.toLowercase()}.HTML'
+      card.addEventListener('click', () => {
+        window.location.href = `${dept.code.toLowerCase()}.html`;
       });
       grid.appendChild(card);
     });
@@ -802,7 +801,10 @@
 <!-- ======================= 3) JS — paste before </script>, or add a new <script> block ======================= -->
 <script>
 (function(){
-  const API_BASE = '/api';
+  const API_BASE = window.location.protocol === 'file:' ||
+    ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://127.0.0.1:5000'
+    : '/api';
   const RECORD_SECONDS = 10;
 
   const fab            = document.getElementById('attendanceFab');

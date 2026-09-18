@@ -264,218 +264,6 @@
   }
   .empty-state a{ color:var(--orange); font-weight:600; text-decoration:none; }
 </style>
-<style>
-  /* ---------- Floating attendance button ---------- */
-  .attendance-fab{
-    position:fixed;
-    right:32px;
-    bottom:32px;
-    z-index:50;
-    width:64px; height:64px;
-    border-radius:50%;
-    border:none;
-    cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
-    color:#fff;
-    box-shadow:0 14px 30px -8px rgba(217,106,22,0.55), 0 4px 14px -2px rgba(217,106,22,0.3);
-    transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s ease, filter .25s ease;
-  }
-  .attendance-fab:hover{ transform:translateY(-3px) scale(1.04); filter:brightness(1.05); }
-  .attendance-fab:active{ transform:translateY(0) scale(0.97); }
-  .attendance-fab svg{ width:26px; height:26px; }
- 
-  .attendance-fab-label{
-    position:fixed;
-    right:32px;
-    bottom:104px;
-    z-index:50;
-    font-size:11.5px;
-    font-weight:600;
-    color:var(--navy-soft);
-    background:var(--glass-fill);
-    border:1px solid var(--glass-border);
-    backdrop-filter:blur(16px) saturate(160%);
-    -webkit-backdrop-filter:blur(16px) saturate(160%);
-    padding:6px 12px;
-    border-radius:999px;
-    box-shadow:var(--shadow-soft);
-    pointer-events:none;
-    opacity:0;
-    transform:translateY(6px);
-    transition: opacity .3s ease, transform .3s ease;
-  }
-  .attendance-fab-wrap:hover .attendance-fab-label{ opacity:1; transform:translateY(0); }
- 
-  @media (max-width:640px){
-    .attendance-fab{ right:20px; bottom:20px; width:58px; height:58px; }
-    .attendance-fab-label{ display:none; }
-  }
- 
-  /* ---------- Shared dark overlay ---------- */
-  .attendance-overlay{
-    position:fixed;
-    inset:0;
-    z-index:100;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background:rgba(20,28,46,0.6);
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
-    padding:24px;
-  }
-  .attendance-overlay.is-open{ display:flex; }
- 
-  .attendance-card{
-    position:relative;
-    width:min(420px, 100%);
-    border-radius:26px;
-    background:var(--cream);
-    border:1px solid var(--glass-border);
-    box-shadow:var(--shadow-soft);
-    overflow:hidden;
-    animation: attendanceIn 0.35s cubic-bezier(.16,1,.3,1) both;
-  }
-  @keyframes attendanceIn{
-    from{ opacity:0; transform:translateY(18px) scale(0.97); }
-    to{ opacity:1; transform:translateY(0) scale(1); }
-  }
- 
-  .attendance-head{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 22px;
-    border-bottom:1px solid var(--border);
-  }
-  .attendance-title{
-    font-family:'Outfit', sans-serif;
-    font-size:16px; font-weight:700;
-    color:var(--navy);
-    margin:0;
-  }
-  .attendance-close{
-    width:30px; height:30px;
-    border-radius:50%;
-    border:none;
-    background:var(--beige);
-    color:var(--navy-soft);
-    cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    transition: background .2s ease, color .2s ease;
-  }
-  .attendance-close:hover{ background:var(--orange); color:#fff; }
- 
-  /* ---------- Step 1: choice screen ---------- */
-  .choice-body{
-    padding:26px 22px 30px;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-  }
-  .choice-option{
-    display:flex; align-items:center; gap:14px;
-    padding:16px 18px;
-    border-radius:16px;
-    border:1px solid var(--border);
-    background:var(--glass-fill-strong, rgba(255,255,255,0.6));
-    cursor:pointer;
-    text-align:left;
-    font-family:'Inter', sans-serif;
-    transition: transform .25s cubic-bezier(.4,0,.2,1), border-color .25s ease, background .25s ease;
-  }
-  .choice-option:hover{
-    transform:translateY(-2px);
-    border-color:rgba(217,106,22,0.4);
-    background:var(--cream);
-  }
-  .choice-icon{
-    flex:0 0 auto;
-    width:42px; height:42px;
-    border-radius:12px;
-    display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(145deg, rgba(31,58,109,0.08), rgba(217,106,22,0.08));
-    color:var(--navy);
-  }
-  .choice-icon svg{ width:20px; height:20px; }
-  .choice-text-title{ font-size:14.5px; font-weight:600; color:var(--navy); margin:0 0 2px; }
-  .choice-text-sub{ font-size:12px; color:#8b8478; margin:0; }
- 
-  /* ---------- Step 2: camera / preview screen ---------- */
-  .camera-body{
-    position:relative;
-    background:#0d1420;
-    aspect-ratio:4/3;
-    display:flex; align-items:center; justify-content:center;
-    overflow:hidden;
-  }
-  .camera-video, .camera-canvas-preview{
-    width:100%; height:100%;
-    object-fit:cover;
-    display:block;
-  }
-  .camera-canvas-preview{ display:none; }
- 
-  .camera-status{
-    position:absolute;
-    inset:0;
-    display:flex; align-items:center; justify-content:center;
-    text-align:center;
-    padding:24px;
-    font-size:13.5px;
-    color:#d7dce6;
-    background:rgba(13,20,32,0.85);
-  }
-  .camera-status.is-hidden{ display:none; }
- 
-  .camera-footer{
-    display:flex; align-items:center; justify-content:center;
-    gap:16px;
-    padding:20px 22px 24px;
-  }
- 
-  .capture-btn{
-    width:60px; height:60px;
-    border-radius:50%;
-    border:3px solid var(--orange);
-    background:#fff;
-    cursor:pointer;
-    position:relative;
-    transition: transform .2s ease;
-  }
-  .capture-btn::after{
-    content:"";
-    position:absolute; inset:6px;
-    border-radius:50%;
-    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
-  }
-  .capture-btn:hover{ transform:scale(1.05); }
-  .capture-btn:active{ transform:scale(0.95); }
- 
-  .retake-btn, .submit-btn, .back-btn{
-    padding:12px 22px;
-    border-radius:999px;
-    border:none;
-    font-family:'Inter', sans-serif;
-    font-weight:600;
-    font-size:13.5px;
-    cursor:pointer;
-    transition: transform .2s ease, filter .2s ease;
-  }
-  .retake-btn, .back-btn{
-    background:var(--beige);
-    color:var(--navy);
-  }
-  .submit-btn{
-    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%);
-    color:#fff;
-    box-shadow:0 10px 22px -8px rgba(217,106,22,0.45);
-  }
-  .retake-btn:hover, .submit-btn:hover, .back-btn:hover{ transform:translateY(-2px); filter:brightness(1.03); }
- 
-  .is-hidden{ display:none !important; }
-</style>
- 
-
 </head>
 <body>
 
@@ -508,7 +296,7 @@
       </div>
     </div>
 
-    <a class="back-link" href="Departments.html">
+    <a class="back-link" href="departments.html">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -517,7 +305,7 @@
   </div>
 
   <div class="intro">
-    <div class="intro-eyebrow" id="deptEyebrow">IT</div>
+    <div class="intro-eyebrow" id="deptEyebrow">MECH</div>
     <h1 class="intro-title" id="deptTitle">Select your section</h1>
     <p class="intro-sub" id="deptSub">Choose your section to continue to your attendance dashboard.</p>
   </div>
@@ -527,7 +315,7 @@
   </div>
 
   <div class="empty-state" id="emptyState">
-    No department was selected. Please <a href="Departments.html">go back and choose a department</a> first.
+    No department was selected. Please <a href="departments.html">go back and choose a department</a> first.
   </div>
 
   <script>
@@ -559,7 +347,7 @@
 
     const params = new URLSearchParams(window.location.search);
     // Falls back to IT when the page is opened directly (no ?dept= in the URL)
-    const deptCode = (params.get('dept') || 'IT').toUpperCase().trim();
+    const deptCode = (params.get('dept') || 'MECH').toUpperCase().trim();
 
     const grid = document.getElementById('sectionGrid');
     const emptyState = document.getElementById('emptyState');
@@ -573,7 +361,7 @@
       deptTitle.textContent = 'No department selected';
       deptSub.textContent = 'Pick a department first to see its sections.';
     } else {
-      const deptName = departmentNames[deptCode];;
+      const deptName = departmentNames[deptCode];
       deptTitle.textContent = 'Select your section';
       deptSub.innerHTML = `Choose your section within <strong>${deptName}</strong> to continue to your attendance dashboard.`;
 
@@ -581,7 +369,7 @@
 
       sections.forEach((section, i) => {
         const card = document.createElement('a');
-        card.href = `Dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}`;
+        card.href = `dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}`;
         card.className = 'section-card';
         card.style.animationDelay = (i * 0.06) + 's';
         card.setAttribute('data-section', section);
@@ -596,16 +384,6 @@
       });
     }
   </script>
-
-<!-- hidden native file input used for gallery uploads -->
-<input type="file" id="galleryInput" accept="image/*" class="is-hidden">
- 
-
- 
- 
-<!-- ======================= 3) JS — paste before </script>, or add a new <script> block ======================= -->
-
-
 
 </body>
 </html>

@@ -673,6 +673,10 @@
 
     const errorBox = document.getElementById('loginError');
     const regnoInput = document.getElementById('regno');
+    const API_BASE = window.location.protocol === 'file:' ||
+      ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://127.0.0.1:5000'
+      : '/api';
 
     form.addEventListener('submit', async function(e){
       e.preventDefault();
@@ -681,7 +685,7 @@
       btn.classList.add('is-loading');
 
       try {
-        const response = await fetch('/api/login', {
+        const response = await fetch(`${API_BASE}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -699,7 +703,7 @@
           localStorage.setItem('reg_number', data.reg_number);
 
           // Only now do we move to the next page
-          window.location.href = 'Departments.HTML';
+          window.location.href = 'departments.html';
         } else {
           // Wrong reg number / password — show the backend's message, stay on this page
           errorBox.textContent = data.message;

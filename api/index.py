@@ -8,7 +8,10 @@ if BACKEND_DIR not in sys.path:
 from app import app
 from database import init_db
 
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"[AttendX] DB initialization warning: {e}")
 
 
 class ApiPathMiddleware:
@@ -16,11 +19,12 @@ class ApiPathMiddleware:
         self.application = application
 
     def __call__(self, environ, start_response):
-        path = environ.get("PATH_INFO", "")
-        if path == "/api":
-            environ["PATH_INFO"] = "/"
-        elif path.startswith("/api/"):
-            environ["PATH_INFO"] = path[4:]
+        raw_uri = environ.get("REQUEST_URI") or environ.get("RAW_URI") or environ.get("HTTP_X_MATCHED_PATH")
+        if raw_uri:
+            clean_path = raw_uri.split("?")[0]
+            if clean_path and clean_path not in ("/api/index.py", "/api/index"):
+                environ["PATH_INFO"] = clean_path
+
         return self.application(environ, start_response)
 
 

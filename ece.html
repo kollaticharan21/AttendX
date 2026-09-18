@@ -296,7 +296,7 @@
       </div>
     </div>
 
-    <a class="back-link" href="Departments.html">
+    <a class="back-link" href="departments.html">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -315,7 +315,7 @@
   </div>
 
   <div class="empty-state" id="emptyState">
-    No department was selected. Please <a href="Departments.html">go back and choose a department</a> first.
+    No department was selected. Please <a href="departments.html">go back and choose a department</a> first.
   </div>
 
   <script>
@@ -369,7 +369,7 @@
 
       sections.forEach((section, i) => {
         const card = document.createElement('a');
-        card.href = `Dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}`;
+        card.href = `dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}`;
         card.className = 'section-card';
         card.style.animationDelay = (i * 0.06) + 's';
         card.setAttribute('data-section', section);

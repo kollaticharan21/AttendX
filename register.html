@@ -185,7 +185,7 @@
 
     <div class="message" id="message"></div>
 
-    <a href="Departments.HTML" class="back-link">&larr; Back to Departments</a>
+    <a href="departments.html" class="back-link">&larr; Back to Departments</a>
   </div>
 
   <script>
@@ -194,6 +194,10 @@
     const preview = document.getElementById('preview');
     const messageBox = document.getElementById('message');
     const submitBtn = document.getElementById('submitBtn');
+    const API_BASE = window.location.protocol === 'file:' ||
+      ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://127.0.0.1:5000'
+      : '/api';
 
     // If there's no admin token saved from login, send them back to sign in
     const token = localStorage.getItem('token');
@@ -240,7 +244,7 @@
       submitBtn.textContent = 'Registering...';
 
       try {
-        const response = await fetch('/api/register-person', {
+        const response = await fetch(`${API_BASE}/register-person`, {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + token
