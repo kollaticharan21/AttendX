@@ -128,6 +128,9 @@ def get_people():
     """
     dept = request.args.get("department", "").strip().upper()
     section = request.args.get("section", "").strip().upper()
+    year = request.args.get("year", "2").strip()
+    if year not in {"1", "2", "3", "4"}:
+        year = "2"
 
     session = db_session()
     query = session.query(User).filter_by(role="student")
@@ -136,6 +139,7 @@ def get_people():
         query = query.filter(User.department.ilike(dept))
     if section:
         query = query.filter(User.section.ilike(section))
+    query = query.filter((User.year == year) | (User.year.is_(None) & (year == "2")))
 
     students = query.order_by(User.reg_number.asc()).all()
 
@@ -148,6 +152,7 @@ def get_people():
             "reg_number": s.reg_number,
             "department": s.department,
             "section": s.section,
+            "year": s.year or "2",
             "profile_photo_path": s.profile_photo_path
         })
 
@@ -269,6 +274,9 @@ def register_student():
     full_name = request.form.get("full_name", "").strip() or request.form.get("name", "").strip()
     department = request.form.get("department", "").strip().upper()
     section = request.form.get("section", "").strip().upper()
+    year = request.form.get("year", "2").strip()
+    if year not in {"1", "2", "3", "4"}:
+        year = "2"
     password = request.form.get("password", "").strip() or reg_number
 
     if not reg_number or not full_name:
@@ -340,6 +348,7 @@ def register_student():
         role="student",
         department=department or "CSE",
         section=section or "A",
+        year=year,
         full_name=full_name,
         profile_photo_path=first_photo_filename
     )
@@ -367,7 +376,7 @@ def register_student():
 # Used by both the photo-based and video-based attendance endpoints so the
 # matching/marking logic only lives in one place.
 # ============================================================================
-def _load_roster(dept: str, section: str):
+def _load_roster(dept: str, section: str, year: str):
     """Returns (students, candidate_roster, error_response) for a dept/section."""
     session = db_session()
     students = (
@@ -375,6 +384,7 @@ def _load_roster(dept: str, section: str):
         .filter_by(role="student")
         .filter(User.department.ilike(dept))
         .filter(User.section.ilike(section))
+        .filter((User.year == year) | (User.year.is_(None) & (year == "2")))
         .all()
     )
 
@@ -398,7 +408,7 @@ def _load_roster(dept: str, section: str):
     return students, candidate_roster, None
 
 
-def _finalize_attendance(dept, section, students, candidate_roster, all_detected_embeddings, units_processed, unit_key="photos_processed"):
+def _finalize_attendance(dept, section, year, students, candidate_roster, all_detected_embeddings, units_processed, unit_key="photos_processed"):
     """
     Runs cosine-similarity matching against the roster, saves today's
     AttendanceRecord rows, and returns the summary dict used by both endpoints.
@@ -450,6 +460,7 @@ def _finalize_attendance(dept, section, students, candidate_roster, all_detected
                 user_id=student.id,
                 department=dept,
                 section=section,
+                year=year,
                 date=today,
                 timestamp=now,
                 status=status
@@ -488,6 +499,9 @@ def mark_attendance():
     """
     dept = request.form.get("department", "").strip().upper()
     section = request.form.get("section", "").strip().upper()
+    year = request.form.get("year", "2").strip()
+    if year not in {"1", "2", "3", "4"}:
+        year = "2"
 
     if not dept or not section:
         return jsonify({"success": False, "message": "Department and Section are required."}), 400
@@ -500,7 +514,7 @@ def mark_attendance():
     if len(uploaded_files) > 4:
         return jsonify({"success": False, "message": "Maximum 4 photos allowed per attendance session."}), 400
 
-    students, candidate_roster, error = _load_roster(dept, section)
+    students, candidate_roster, error = _load_roster(dept, section, year)
     if error:
         return error
 
@@ -534,7 +548,7 @@ def mark_attendance():
             print("[MarkAttendance] Face engine not active. Simulating mock detection for testing.")
 
     return _finalize_attendance(
-        dept, section, students, candidate_roster,
+        dept, section, year, students, candidate_roster,
         all_detected_embeddings, photos_processed, unit_key="photos_processed"
     )
 
@@ -592,6 +606,9 @@ def mark_attendance_video():
     """
     dept = request.form.get("department", "").strip().upper()
     section = request.form.get("section", "").strip().upper()
+    year = request.form.get("year", "2").strip()
+    if year not in {"1", "2", "3", "4"}:
+        year = "2"
 
     if not dept or not section:
         return jsonify({"success": False, "message": "Department and Section are required."}), 400
@@ -614,7 +631,7 @@ def mark_attendance_video():
             "message": "Video attendance is unavailable in this deployment. Use photo attendance or run the full backend locally."
         }), 503
 
-    students, candidate_roster, error = _load_roster(dept, section)
+    students, candidate_roster, error = _load_roster(dept, section, year)
     if error:
         return error
 
@@ -659,7 +676,7 @@ def mark_attendance_video():
             print("[MarkAttendanceVideo] Face engine not active. Simulating mock detection for testing.")
 
     return _finalize_attendance(
-        dept, section, students, candidate_roster,
+        dept, section, year, students, candidate_roster,
         all_detected_embeddings, frames_processed, unit_key="frames_processed"
     )
 
@@ -676,6 +693,9 @@ def get_attendance_history():
     """
     dept = request.args.get("department", "").strip().upper()
     section = request.args.get("section", "").strip().upper()
+    year = request.args.get("year", "2").strip()
+    if year not in {"1", "2", "3", "4"}:
+        year = "2"
     date_str = request.args.get("date", "").strip()
 
     session = db_session()
@@ -685,6 +705,7 @@ def get_attendance_history():
         query = query.filter_by(department=dept)
     if section:
         query = query.filter_by(section=section)
+    query = query.filter((AttendanceRecord.year == year) | (AttendanceRecord.year.is_(None) & (year == "2")))
     if date_str:
         try:
             filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()

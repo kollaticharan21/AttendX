@@ -346,6 +346,7 @@
     };
 
     const params = new URLSearchParams(window.location.search);
+    const year = ['1', '2', '3', '4'].includes(params.get('year')) ? params.get('year') : '2';
     // Falls back to IT when the page is opened directly (no ?dept= in the URL)
     const deptCode = (params.get('dept') || 'ECE').toUpperCase().trim();
 
@@ -369,7 +370,7 @@
 
       sections.forEach((section, i) => {
         const card = document.createElement('a');
-        card.href = `dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}`;
+        card.href = `dashboard.html?dept=${encodeURIComponent(deptCode)}&section=${encodeURIComponent(section)}&year=${encodeURIComponent(year)}`;
         card.className = 'section-card';
         card.style.animationDelay = (i * 0.06) + 's';
         card.setAttribute('data-section', section);

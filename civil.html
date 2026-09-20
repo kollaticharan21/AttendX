@@ -18,5 +18,6 @@
 <a class="card" href="dashboard.html?dept=CIVIL&section=C"><span class="badge">C</span><span class="label">Section C</span><span class="count">CIVIL · C</span></a>
 <a class="card" href="dashboard.html?dept=CIVIL&section=D"><span class="badge">D</span><span class="label">Section D</span><span class="count">CIVIL · D</span></a>
 </section></main>
+<script>const year=['1','2','3','4'].includes(new URLSearchParams(window.location.search).get('year'))?new URLSearchParams(window.location.search).get('year'):'2';document.querySelectorAll('.card').forEach(card=>{card.href+=`&year=${year}`;});</script>
 </body>
 </html>

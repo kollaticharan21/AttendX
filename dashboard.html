@@ -567,6 +567,8 @@
     const params = new URLSearchParams(window.location.search);
     const dept = params.get('dept');
     const section = params.get('section');
+    const year = ['1', '2', '3', '4'].includes(params.get('year')) ? params.get('year') : '2';
+    const yearLabel = { '1': 'First Year', '2': 'Second Year', '3': 'Third Year', '4': 'Fourth Year' }[year];
 
     const pageTitle = document.getElementById('pageTitle');
     const pageSub = document.getElementById('pageSub');
@@ -579,7 +581,7 @@
 
     function loadPeople() {
       grid.innerHTML = '';
-      fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`)
+      fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}&year=${encodeURIComponent(year)}`)
         .then(res => res.json())
         .then(data => {
           if (!data.success || data.people.length === 0) {
@@ -654,7 +656,7 @@
       pageSub.textContent = 'Please go back and choose a department and section first.';
     } else {
       pageTitle.textContent = `${dept} — Section ${section}`;
-      pageSub.textContent = 'Registered students in this section.';
+      pageSub.textContent = `Registered students in this section for ${yearLabel}.`;
       loadPeople();
     }
 
@@ -989,6 +991,7 @@
             const formData = new FormData();
             formData.append('department', dept);
             formData.append('section', section);
+            formData.append('year', year);
             const ext = (recordedVideoBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
             formData.append('video', recordedVideoBlob, `attendance.${ext}`);
 
@@ -1019,6 +1022,7 @@
           const formData = new FormData();
           formData.append('department', dept);
           formData.append('section', section);
+          formData.append('year', year);
           photos.forEach((p, index) => {
             formData.append('photos', p.blob, `attendance${index + 1}.jpg`);
           });

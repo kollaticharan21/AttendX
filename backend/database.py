@@ -53,6 +53,7 @@ class User(Base):
     role = Column(String(20), nullable=False, default="student")  # 'admin' or 'student'
     department = Column(String(32), nullable=True, index=True)    # e.g. 'CSE', 'IT', 'ECE'
     section = Column(String(16), nullable=True, index=True)       # e.g. 'A', 'B', 'C'
+    year = Column(String(1), nullable=True, default="2", index=True)  # academic year 1-4
     full_name = Column(String(128), nullable=False)
     profile_photo_path = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -72,6 +73,7 @@ class User(Base):
             "role": self.role,
             "department": self.department,
             "section": self.section,
+            "year": self.year or "2",
             "full_name": self.full_name,
             "name": self.full_name,  # for frontend compatibility
             "profile_photo_path": self.profile_photo_path,
@@ -114,6 +116,7 @@ class AttendanceRecord(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     department = Column(String(32), nullable=False, index=True)
     section = Column(String(16), nullable=False, index=True)
+    year = Column(String(1), nullable=False, default="2", index=True)
     date = Column(Date, nullable=False, default=date.today, index=True)
     timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
     status = Column(String(20), nullable=False)  # 'Present' or 'Absent'
@@ -121,7 +124,7 @@ class AttendanceRecord(Base):
     user = relationship("User", back_populates="attendance_records")
 
     __table_args__ = (
-        Index("idx_attendance_dept_sec_date", "department", "section", "date"),
+        Index("idx_attendance_dept_sec_year_date", "department", "section", "year", "date"),
     )
 
     def to_dict(self):
@@ -132,6 +135,7 @@ class AttendanceRecord(Base):
             "student_name": self.user.full_name if self.user else None,
             "department": self.department,
             "section": self.section,
+            "year": self.year or "2",
             "date": self.date.isoformat() if self.date else None,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "status": self.status,
@@ -140,7 +144,21 @@ class AttendanceRecord(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _add_legacy_year_columns()
     seed_default_admin()
+
+
+def _add_legacy_year_columns():
+    """Add year columns to databases created before academic-year support."""
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as connection:
+        for table in ("users", "attendance_records"):
+            columns = {row[1] for row in connection.exec_driver_sql(f"PRAGMA table_info({table})")}
+            if "year" not in columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE {table} ADD COLUMN year VARCHAR(1) NOT NULL DEFAULT '2'"
+                )
 
 
 def seed_default_admin():

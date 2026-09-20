@@ -145,6 +145,17 @@
     font-size:15px; color:#7b7566; line-height:1.7;
   }
 
+  .year-picker{
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    margin:28px auto 0;
+  }
+  .year-picker label{ font-size:13px; font-weight:600; color:var(--navy); }
+  .year-picker select{
+    min-width:180px; padding:11px 14px; border:1px solid var(--border);
+    border-radius:12px; background:var(--cream); color:var(--navy);
+    font:600 13px 'Inter', sans-serif; cursor:pointer; outline:none;
+  }
+
   /* ---------- Department grid ---------- */
   .dept-grid{
     position:relative; z-index:2;
@@ -570,6 +581,15 @@
     <div class="intro-eyebrow">Step 2 of 2</div>
     <h1 class="intro-title">Select the department</h1>
     <p class="intro-sub">Choose the department you're enrolled in to continue to your attendance dashboard.</p>
+    <div class="year-picker">
+      <label for="yearSelect">Academic year</label>
+      <select id="yearSelect" aria-label="Select academic year">
+        <option value="1">First Year</option>
+        <option value="2" selected>Second Year</option>
+        <option value="3">Third Year</option>
+        <option value="4">Fourth Year</option>
+      </select>
+    </div>
   </div>
 
   <div class="dept-grid" id="deptGrid">
@@ -612,10 +632,13 @@
     </svg>`;
 
     const grid = document.getElementById('deptGrid');
+    const yearSelect = document.getElementById('yearSelect');
+    const selectedYear = new URLSearchParams(window.location.search).get('year') || '2';
+    yearSelect.value = ['1', '2', '3', '4'].includes(selectedYear) ? selectedYear : '2';
 
     departments.forEach((dept, i) => {
       const card = document.createElement('a');
-     card.href = `${dept.code.toLowerCase()}.html`;
+      card.href = `${dept.code.toLowerCase()}.html?year=${yearSelect.value}`;
       card.className = 'dept-card';
       card.style.animationDelay = (i * 0.06) + 's';
       card.setAttribute('data-dept', dept.code);
@@ -631,9 +654,16 @@
         </div>
       `;
       card.addEventListener('click', () => {
-        window.location.href = `${dept.code.toLowerCase()}.html`;
+        window.location.href = `${dept.code.toLowerCase()}.html?year=${yearSelect.value}`;
       });
       grid.appendChild(card);
+    });
+
+    yearSelect.addEventListener('change', () => {
+      departments.forEach(dept => {
+        const card = document.querySelector(`[data-dept="${dept.code}"]`);
+        card.href = `${dept.code.toLowerCase()}.html?year=${yearSelect.value}`;
+      });
     });
 
     // Fill the attendance department dropdown, then its matching sections.

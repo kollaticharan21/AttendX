@@ -174,6 +174,16 @@
       </div>
 
       <div class="field">
+        <label for="year">Academic Year</label>
+        <select id="year" required style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--cream); font-family:'Inter', sans-serif; font-size:14.5px; color:var(--navy);">
+          <option value="1">First Year</option>
+          <option value="2" selected>Second Year</option>
+          <option value="3">Third Year</option>
+          <option value="4">Fourth Year</option>
+        </select>
+      </div>
+
+      <div class="field">
         <label for="photos">Photos (minimum 3)</label>
         <input type="file" id="photos" accept=".jpg,.jpeg,.png" multiple required>
         <div class="hint">Clear, well-lit, front-facing photos work best — different angles help accuracy.</div>
@@ -225,6 +235,7 @@
       const regNumber = document.getElementById('regNumber').value.trim();
       const department = document.getElementById('department').value;
       const section = document.getElementById('section').value;
+      const year = document.getElementById('year').value;
       const files = photosInput.files;
 
       if (files.length < 3) {
@@ -238,6 +249,7 @@
       formData.append('reg_number', regNumber);
       formData.append('department', department);
       formData.append('section', section);
+      formData.append('year', year);
       Array.from(files).forEach(file => formData.append('photos', file));
 
       submitBtn.disabled = true;
