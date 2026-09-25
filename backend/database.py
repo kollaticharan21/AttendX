@@ -36,7 +36,17 @@ def _find_seed_db():
     return None
 
 
-if os.environ.get("VERCEL"):
+def is_serverless():
+    return bool(
+        os.environ.get("VERCEL")
+        or os.environ.get("VERCEL_ENV")
+        or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+        or os.environ.get("LAMBDA_TASK_ROOT")
+        or not os.access(".", os.W_OK)
+    )
+
+
+if is_serverless():
     tmp_dir = tempfile.gettempdir()
     tmp_db = os.path.join(tmp_dir, "attendx_live.db")
     seed_db = _find_seed_db()

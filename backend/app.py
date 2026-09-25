@@ -9,7 +9,7 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from database import init_db, ensure_db, db_session, User, FaceEmbedding, AttendanceRecord
+from database import init_db, ensure_db, is_serverless, db_session, User, FaceEmbedding, AttendanceRecord
 from auth import generate_token, jwt_required, admin_required
 from face_engine import face_engine, DEFAULT_THRESHOLD
 
@@ -27,7 +27,7 @@ CORS(
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-if os.environ.get("VERCEL"):
+if is_serverless():
     STORAGE_DIR = os.path.join(tempfile.gettempdir(), "attendx_storage")
 else:
     STORAGE_DIR = os.path.join(BASE_DIR, "storage")
