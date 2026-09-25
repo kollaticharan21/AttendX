@@ -1,7 +1,10 @@
 import os
 import sys
 
-BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
+BACKEND_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "backend")
+)
+
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
@@ -19,13 +22,7 @@ class ApiPathMiddleware:
         self.application = application
 
     def __call__(self, environ, start_response):
-        raw_uri = (
-            environ.get("REQUEST_URI")
-            or environ.get("RAW_URI")
-            or environ.get("HTTP_X_NOW_ROUTE")
-            or environ.get("HTTP_X_MATCHED_PATH")
-            or environ.get("PATH_INFO")
-        )
+        raw_uri = environ.get("REQUEST_URI") or environ.get("RAW_URI") or environ.get("HTTP_X_MATCHED_PATH")
         if raw_uri:
             clean_path = raw_uri.split("?")[0]
             if clean_path and clean_path not in ("/api/index.py", "/api/index"):
