@@ -28,7 +28,7 @@ class ApiPathMiddleware:
         )
         if raw_uri:
             clean_path = raw_uri.split("?")[0]
-            if clean_path and clean_path not in ("/api/index.py", "/api/index", "/api"):
+            if clean_path and clean_path not in ("/api/index.py", "/api/index"):
                 environ["PATH_INFO"] = clean_path
 
         return self.application(environ, start_response)

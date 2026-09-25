@@ -88,6 +88,7 @@ def handle_unexpected_error(err):
 # ============================================================================
 # HEALTH & STATUS
 # ============================================================================
+@app.route("/api", methods=["GET"])
 @app.route("/health", methods=["GET"])
 @app.route("/api/health", methods=["GET"])
 def health_check():
