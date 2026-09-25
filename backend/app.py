@@ -103,6 +103,7 @@ def health_check():
         db_status = "error"
         db_error = str(e)
 
+    from database import DATABASE_URL, _find_seed_db
     return jsonify({
         "status": "healthy" if db_status == "ok" else "degraded",
         "service": "AttendX Backend",
@@ -110,7 +111,9 @@ def health_check():
         "database": {
             "status": db_status,
             "error": db_error,
-            "users_count": users_count
+            "users_count": users_count,
+            "db_url": DATABASE_URL,
+            "seed_db_found": _find_seed_db()
         },
         "face_engine": {
             "initialized": face_engine.is_ready(),

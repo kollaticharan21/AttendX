@@ -38,14 +38,16 @@ def _find_seed_db():
 
 if os.environ.get("VERCEL"):
     tmp_dir = tempfile.gettempdir()
-    tmp_db = os.path.join(tmp_dir, "attendx.db")
+    tmp_db = os.path.join(tmp_dir, "attendx_live.db")
     seed_db = _find_seed_db()
-    if seed_db:
-        if not os.path.exists(tmp_db) or os.path.getsize(tmp_db) == 0:
-            try:
-                shutil.copyfile(seed_db, tmp_db)
-            except Exception as _e:
-                print(f"[AttendX DB] Warning copying seed database: {_e}")
+    if seed_db and not os.path.exists(tmp_db):
+        try:
+            with open(seed_db, "rb") as sf, open(tmp_db, "wb") as df:
+                df.write(sf.read())
+            os.chmod(tmp_db, 0o666)
+        except Exception as _e:
+            print(f"[AttendX DB] Warning copying seed database: {_e}")
+    elif os.path.exists(tmp_db):
         try:
             os.chmod(tmp_db, 0o666)
         except Exception:
