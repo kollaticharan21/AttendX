@@ -9,13 +9,19 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from database import init_db, db_session, User, FaceEmbedding, AttendanceRecord
+from database import init_db, ensure_db, db_session, User, FaceEmbedding, AttendanceRecord
 from auth import generate_token, jwt_required, admin_required
 from face_engine import face_engine, DEFAULT_THRESHOLD
 
 # Initialize Flask application
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    supports_credentials=True
+)
 
 # Configuration & Directories
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -54,16 +60,57 @@ def shutdown_session(exception=None):
     db_session.remove()
 
 
+@app.before_request
+def handle_before_request():
+    ensure_db()
+    if request.method == "OPTIONS":
+        return app.make_default_options_response()
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(err):
+    from werkzeug.exceptions import HTTPException
+    import traceback
+    app.logger.error(f"[AttendX Unhandled Error] {err}\n{traceback.format_exc()}")
+    if isinstance(err, HTTPException):
+        return jsonify({
+            "success": False,
+            "message": err.description or str(err)
+        }), err.code
+
+    return jsonify({
+        "success": False,
+        "message": f"Server error: {str(err)}",
+        "error": str(err)
+    }), 500
+
+
 # ============================================================================
 # HEALTH & STATUS
 # ============================================================================
 @app.route("/health", methods=["GET"])
 @app.route("/api/health", methods=["GET"])
 def health_check():
+    ensure_db()
+    db_status = "ok"
+    db_error = None
+    users_count = 0
+    try:
+        session = db_session()
+        users_count = session.query(User).count()
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+
     return jsonify({
-        "status": "healthy",
+        "status": "healthy" if db_status == "ok" else "degraded",
         "service": "AttendX Backend",
         "timestamp": datetime.utcnow().isoformat(),
+        "database": {
+            "status": db_status,
+            "error": db_error,
+            "users_count": users_count
+        },
         "face_engine": {
             "initialized": face_engine.is_ready(),
             "using_gpu": face_engine.using_gpu,

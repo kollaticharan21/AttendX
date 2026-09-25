@@ -706,11 +706,12 @@
           window.location.href = 'departments.html';
         } else {
           // Wrong reg number / password — show the backend's message, stay on this page
-          errorBox.textContent = data.message;
+          errorBox.textContent = data.message || 'Invalid credentials.';
           errorBox.style.display = 'block';
         }
       } catch (err) {
-        errorBox.textContent = 'Could not reach the server. Is app.py running?';
+        console.error('Login error:', err);
+        errorBox.textContent = 'Server connection error. Please try again or check backend health.';
         errorBox.style.display = 'block';
       } finally {
         btn.classList.remove('is-loading');

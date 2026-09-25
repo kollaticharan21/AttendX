@@ -21,26 +21,62 @@ import shutil
 
 Base = declarative_base()
 
+
+def _find_seed_db():
+    candidates = [
+        os.path.join(os.path.abspath(os.path.dirname(__file__)), "attendx.db"),
+        os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), "backend", "attendx.db"),
+        os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), "attendx.db"),
+        os.path.join(os.getcwd(), "backend", "attendx.db"),
+        os.path.join(os.getcwd(), "attendx.db"),
+    ]
+    for c in candidates:
+        if os.path.isfile(c) and os.path.getsize(c) > 0:
+            return c
+    return None
+
+
 if os.environ.get("VERCEL"):
     tmp_dir = tempfile.gettempdir()
     tmp_db = os.path.join(tmp_dir, "attendx.db")
-    seed_db = os.path.join(os.path.abspath(os.path.dirname(__file__)), "attendx.db")
-    if os.path.exists(seed_db) and not os.path.exists(tmp_db):
+    seed_db = _find_seed_db()
+    if seed_db:
+        if not os.path.exists(tmp_db) or os.path.getsize(tmp_db) == 0:
+            try:
+                shutil.copyfile(seed_db, tmp_db)
+            except Exception as _e:
+                print(f"[AttendX DB] Warning copying seed database: {_e}")
         try:
-            shutil.copy2(seed_db, tmp_db)
-        except Exception as _e:
+            os.chmod(tmp_db, 0o666)
+        except Exception:
             pass
     DEFAULT_DATABASE_URL = f"sqlite:///{tmp_db.replace(chr(92), '/')}"
 else:
     DEFAULT_DATABASE_URL = "sqlite:///attendx.db"
 
 DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+def _build_engine(url: str):
+    connect_args = {}
+    if url.startswith("sqlite"):
+        connect_args = {"check_same_thread": False, "timeout": 30}
+    return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+
+
+try:
+    engine = _build_engine(DATABASE_URL)
+except Exception as e:
+    print(f"[AttendX DB] Failed to create engine with {DATABASE_URL}: {e}. Falling back to SQLite.")
+    if os.environ.get("VERCEL"):
+        tmp_db = os.path.join(tempfile.gettempdir(), "attendx.db")
+        DATABASE_URL = f"sqlite:///{tmp_db.replace(chr(92), '/')}"
+    else:
+        DATABASE_URL = "sqlite:///attendx.db"
+    engine = _build_engine(DATABASE_URL)
+
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 
@@ -142,23 +178,59 @@ class AttendanceRecord(Base):
         }
 
 
+DEFAULT_STUDENTS = [
+    {"reg_number": "21B01A0501", "full_name": "K. Rajesh Kumar", "department": "CSE", "section": "A", "year": "2"},
+    {"reg_number": "21B01A0502", "full_name": "P. Sneha Latha", "department": "CSE", "section": "A", "year": "2"},
+    {"reg_number": "21B01A0503", "full_name": "M. Sai Tarun", "department": "CSE", "section": "A", "year": "2"},
+    {"reg_number": "21B01A0504", "full_name": "V. Ananya Rao", "department": "CSE", "section": "A", "year": "2"},
+    {"reg_number": "21B01A0505", "full_name": "G. Varun Teja", "department": "CSE", "section": "A", "year": "2"},
+    {"reg_number": "21B01A1201", "full_name": "B. Akhil Varma", "department": "IT", "section": "A", "year": "2"},
+    {"reg_number": "21B01A1202", "full_name": "T. Divya Sri", "department": "IT", "section": "A", "year": "2"},
+    {"reg_number": "25B91A1233", "full_name": "KOLLATI CHARAN", "department": "IT", "section": "A", "year": "2"},
+    {"reg_number": "25B91A1278", "full_name": "CHARAN KOLLATI", "department": "IT", "section": "B", "year": "2"},
+    {"reg_number": "25B91A1280", "full_name": "KOMATILANKA BHARAT SAI", "department": "IT", "section": "B", "year": "2"},
+    {"reg_number": "25B91A12A2", "full_name": "MAMIDI JAGADEESH", "department": "IT", "section": "B", "year": "2"},
+    {"reg_number": "25B91A12C0", "full_name": "NARINA BHARATH", "department": "IT", "section": "B", "year": "2"},
+    {"reg_number": "25B91A1288", "full_name": "KOTLA PREETHAM", "department": "IT", "section": "C", "year": "2"},
+    {"reg_number": "25B91A12A1", "full_name": "MAMIDI CHANDRAHAS", "department": "IT", "section": "C", "year": "2"},
+    {"reg_number": "25B91A1282", "full_name": "CHARAN KOLLTYY", "department": "IT", "section": "E", "year": "2"}
+]
+
+_db_initialized = False
+
+
 def init_db():
-    Base.metadata.create_all(bind=engine)
-    _add_legacy_year_columns()
-    seed_default_admin()
+    global _db_initialized
+    try:
+        Base.metadata.create_all(bind=engine)
+        _add_legacy_year_columns()
+        seed_default_admin()
+        seed_default_students()
+        _db_initialized = True
+    except Exception as e:
+        print(f"[AttendX DB] Initialization warning: {e}")
+
+
+def ensure_db():
+    global _db_initialized
+    if not _db_initialized:
+        init_db()
 
 
 def _add_legacy_year_columns():
     """Add year columns to databases created before academic-year support."""
     if not DATABASE_URL.startswith("sqlite"):
         return
-    with engine.begin() as connection:
-        for table in ("users", "attendance_records"):
-            columns = {row[1] for row in connection.exec_driver_sql(f"PRAGMA table_info({table})")}
-            if "year" not in columns:
-                connection.exec_driver_sql(
-                    f"ALTER TABLE {table} ADD COLUMN year VARCHAR(1) NOT NULL DEFAULT '2'"
-                )
+    try:
+        with engine.begin() as connection:
+            for table in ("users", "attendance_records"):
+                columns = {row[1] for row in connection.exec_driver_sql(f"PRAGMA table_info({table})")}
+                if "year" not in columns:
+                    connection.exec_driver_sql(
+                        f"ALTER TABLE {table} ADD COLUMN year VARCHAR(1) NOT NULL DEFAULT '2'"
+                    )
+    except Exception as e:
+        print(f"[AttendX DB] Note on year columns migration: {e}")
 
 
 def seed_default_admin():
@@ -183,5 +255,43 @@ def seed_default_admin():
     except Exception as e:
         session.rollback()
         print(f"[AttendX DB] Warning during admin seeding: {e}")
+    finally:
+        session.close()
+
+
+def seed_default_students():
+    session = db_session()
+    try:
+        student_count = session.query(User).filter_by(role="student").count()
+        if student_count == 0:
+            for s in DEFAULT_STUDENTS:
+                student = User(
+                    reg_number=s["reg_number"],
+                    password_hash=generate_password_hash(s["reg_number"]),
+                    role="student",
+                    department=s["department"],
+                    section=s["section"],
+                    year=s.get("year", "2"),
+                    full_name=s["full_name"],
+                    profile_photo_path=None
+                )
+                session.add(student)
+                session.flush()
+
+                # Generate normalized dummy face embedding for matching
+                seed_val = sum(ord(c) for c in s["reg_number"])
+                rng = np.random.RandomState(seed_val)
+                emb = rng.randn(512).astype(np.float32)
+                emb = emb / np.linalg.norm(emb)
+
+                face_emb = FaceEmbedding(user_id=student.id)
+                face_emb.set_vector(emb)
+                session.add(face_emb)
+
+            session.commit()
+            print(f"[AttendX DB] Seeded {len(DEFAULT_STUDENTS)} default students.")
+    except Exception as e:
+        session.rollback()
+        print(f"[AttendX DB] Warning during student seeding: {e}")
     finally:
         session.close()
