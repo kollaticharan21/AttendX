@@ -70,24 +70,61 @@ DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+if is_serverless() and DATABASE_URL.startswith("sqlite"):
+    # Vercel's filesystem is read-only except /tmp. A relative sqlite path
+    # (e.g. sqlite:///attendx.db) cannot be opened there, so force /tmp.
+    _sqlite_path = DATABASE_URL.split("///", 1)[-1]
+    if _sqlite_path != ":memory:" and not os.path.abspath(_sqlite_path).startswith(tempfile.gettempdir()):
+        DATABASE_URL = DEFAULT_DATABASE_URL
+
 
 def _build_engine(url: str):
+    from sqlalchemy.pool import StaticPool
     connect_args = {}
+    kwargs = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
         connect_args = {"check_same_thread": False, "timeout": 30}
-    return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+        if url in ("sqlite://", "sqlite:///:memory:"):
+            kwargs = {"poolclass": StaticPool}
+    return create_engine(url, connect_args=connect_args, **kwargs)
 
 
-try:
-    engine = _build_engine(DATABASE_URL)
-except Exception as e:
-    print(f"[AttendX DB] Failed to create engine with {DATABASE_URL}: {e}. Falling back to SQLite.")
-    if os.environ.get("VERCEL"):
-        tmp_db = os.path.join(tempfile.gettempdir(), "attendx.db")
-        DATABASE_URL = f"sqlite:///{tmp_db.replace(chr(92), '/')}"
-    else:
-        DATABASE_URL = "sqlite:///attendx.db"
-    engine = _build_engine(DATABASE_URL)
+def _engine_works(eng) -> bool:
+    try:
+        with eng.connect() as conn:
+            conn.exec_driver_sql("SELECT 1")
+        return True
+    except Exception as e:
+        print(f"[AttendX DB] Cannot open {eng.url}: {e}")
+        return False
+    finally:
+        eng.dispose()
+
+
+engine = None
+_candidates = [DATABASE_URL]
+if DATABASE_URL.startswith("sqlite"):
+    _tmp_fallback = "sqlite:///" + os.path.join(tempfile.gettempdir(), "attendx_live.db").replace(chr(92), "/")
+    if _tmp_fallback not in _candidates:
+        _candidates.append(_tmp_fallback)
+    _candidates.append("sqlite://")  # last resort: in-memory (resets on cold start)
+else:
+    _candidates.append("sqlite:///" + os.path.join(tempfile.gettempdir(), "attendx_live.db").replace(chr(92), "/"))
+    _candidates.append("sqlite://")
+
+for _url in _candidates:
+    try:
+        _eng = _build_engine(_url)
+    except Exception as e:
+        print(f"[AttendX DB] Failed to build engine for {_url}: {e}")
+        continue
+    if _engine_works(_eng):
+        engine = _eng
+        DATABASE_URL = _url
+        break
+
+if engine is None:
+    raise RuntimeError("AttendX: no usable database could be opened")
 
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
