@@ -155,6 +155,55 @@
     border-radius:12px; background:var(--cream); color:var(--navy);
     font:600 13px 'Inter', sans-serif; cursor:pointer; outline:none;
   }
+  .register-access-btn{
+    margin-top:16px;
+    padding:11px 18px;
+    border:1px solid rgba(31,58,109,0.18);
+    border-radius:10px;
+    background:var(--navy);
+    color:var(--cream);
+    font:600 13px 'Inter', sans-serif;
+    cursor:pointer;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .register-access-btn:hover{ transform:translateY(-2px); background:var(--navy-soft); }
+  .register-access-btn:focus-visible{ outline:3px solid var(--orange-light); outline-offset:3px; }
+  .register-dialog{
+    width:min(420px, calc(100% - 32px));
+    padding:0;
+    border:1px solid var(--glass-border);
+    border-radius:18px;
+    background:var(--cream);
+    color:var(--navy);
+    box-shadow:0 24px 70px rgba(31,58,109,0.3);
+  }
+  .register-dialog::backdrop{ background:rgba(20,28,46,0.6); backdrop-filter:blur(5px); }
+  .register-dialog form{ padding:26px; }
+  .register-dialog h2{ margin:0 0 6px; font:700 21px 'Outfit', sans-serif; }
+  .register-dialog p{ margin:0 0 18px; color:#7b7566; font-size:13.5px; line-height:1.5; }
+  .register-dialog label{ display:block; margin-bottom:7px; font-size:12.5px; font-weight:600; }
+  .register-dialog input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fff;
+    color:var(--navy);
+    font:600 16px 'Inter', sans-serif;
+  }
+  .register-dialog input:focus{ outline:2px solid var(--orange-light); }
+  .register-access-error{ margin:8px 0 0 !important; color:#C0392B !important; }
+  .register-access-error[hidden]{ display:none; }
+  .register-dialog-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+  .register-dialog-actions button{
+    padding:10px 16px;
+    border:0;
+    border-radius:9px;
+    font:600 13px 'Inter', sans-serif;
+    cursor:pointer;
+  }
+  .register-dialog-cancel{ background:var(--beige); color:var(--navy); }
+  .register-dialog-submit{ background:var(--orange); color:#fff; }
 
   /* ---------- Department grid ---------- */
   .dept-grid{
@@ -590,7 +639,21 @@
         <option value="4">Fourth Year</option>
       </select>
     </div>
+    <button type="button" class="register-access-btn" id="registerAccessButton">Register Person</button>
   </div>
+  <dialog class="register-dialog" id="registerDialog" aria-labelledby="registerDialogTitle">
+    <form id="registerAccessForm">
+      <h2 id="registerDialogTitle">Registration access</h2>
+      <p>Enter the access number to continue.</p>
+      <label for="registerAccessNumber">Access number</label>
+      <input id="registerAccessNumber" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required>
+      <p class="register-access-error" id="registerAccessError" role="alert" hidden>Incorrect access number. Try again.</p>
+      <div class="register-dialog-actions">
+        <button type="button" class="register-dialog-cancel" id="registerDialogCancel">Cancel</button>
+        <button type="submit" class="register-dialog-submit">Continue</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="dept-grid" id="deptGrid">
     <!-- cards injected by script -->
@@ -633,6 +696,28 @@
 
     const grid = document.getElementById('deptGrid');
     const yearSelect = document.getElementById('yearSelect');
+    const registerDialog = document.getElementById('registerDialog');
+    const registerAccessForm = document.getElementById('registerAccessForm');
+    const registerAccessNumber = document.getElementById('registerAccessNumber');
+    const registerAccessError = document.getElementById('registerAccessError');
+
+    document.getElementById('registerAccessButton').addEventListener('click', () => {
+      registerAccessNumber.value = '';
+      registerAccessError.hidden = true;
+      registerDialog.showModal();
+      registerAccessNumber.focus();
+    });
+    document.getElementById('registerDialogCancel').addEventListener('click', () => registerDialog.close());
+    registerAccessForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const enteredNumber = registerAccessNumber.value.trim();
+      if (enteredNumber === '739646') {
+        window.location.href = 'register.html';
+      } else {
+        registerAccessError.hidden = false;
+        registerAccessNumber.focus();
+      }
+    });
     const selectedYear = new URLSearchParams(window.location.search).get('year') || '2';
     yearSelect.value = ['1', '2', '3', '4'].includes(selectedYear) ? selectedYear : '2';
 
