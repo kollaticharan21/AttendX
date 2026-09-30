@@ -798,6 +798,7 @@
           const formData = new FormData();
           formData.append('department', dept);
           formData.append('section', section);
+          formData.append('year', year);
           photos.forEach((p, index) => {
             formData.append('photos', p.blob, `attendance${index + 1}.jpg`);
           });

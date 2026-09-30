@@ -672,6 +672,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const attendanceDeptSelect = document.getElementById('attendanceDeptSelect');
       const attendanceSectionSelect = document.getElementById('attendanceSectionSelect');
+      const attendanceYearSelect = document.getElementById('attendanceYearSelect');
 
       function fillSectionOptions(deptCode){
         attendanceSectionSelect.innerHTML = '';
@@ -690,16 +691,36 @@
         opt.textContent = dept.code;
         attendanceDeptSelect.appendChild(opt);
       });
+
+      const initialYear = ['1','2','3','4'].includes(new URLSearchParams(window.location.search).get('year'))
+        ? new URLSearchParams(window.location.search).get('year')
+        : '2';
+      attendanceYearSelect.value = initialYear;
+      yearSelect.value = initialYear;
       fillSectionOptions(attendanceDeptSelect.value);
 
       attendanceDeptSelect.addEventListener('change', () => {
         fillSectionOptions(attendanceDeptSelect.value);
+      });
+
+      yearSelect.addEventListener('change', () => {
+        attendanceYearSelect.value = yearSelect.value;
+      });
+
+      attendanceYearSelect.addEventListener('change', () => {
+        yearSelect.value = attendanceYearSelect.value;
       });
     });
   </script>
   <div class="attendance-picker">
     <select id="attendanceDeptSelect" aria-label="Select department for attendance"></select>
     <select id="attendanceSectionSelect" aria-label="Select section for attendance"></select>
+    <select id="attendanceYearSelect" aria-label="Select year for attendance">
+      <option value="1">1st Year</option>
+      <option value="2" selected>2nd Year</option>
+      <option value="3">3rd Year</option>
+      <option value="4">4th Year</option>
+    </select>
   </div>
   <div class="attendance-fab-wrap">
   <span class="attendance-fab-label">Take Attendance</span>
@@ -968,6 +989,7 @@
   async function submitPhoto(){
     const department = document.getElementById('attendanceDeptSelect').value;
     const section = document.getElementById('attendanceSectionSelect').value;
+    const yearValue = document.getElementById('attendanceYearSelect').value;
 
     if (!department || !section) {
       overlayTitle.textContent = 'Please pick a department and section first';
@@ -987,6 +1009,7 @@
       formData.append("photos", blob, "attendance.jpg");
       formData.append("department", department);
       formData.append("section", section);
+      formData.append("year", yearValue);
 
       try {
         const response = await fetch(`${API_BASE}/mark-attendance`, {
@@ -1107,6 +1130,7 @@
   async function submitVideo(){
     const department = document.getElementById('attendanceDeptSelect').value;
     const section = document.getElementById('attendanceSectionSelect').value;
+    const yearValue = document.getElementById('attendanceYearSelect').value;
 
     if (!department || !section) {
       overlayTitle.textContent = 'Please pick a department and section first';
@@ -1124,6 +1148,7 @@
     formData.append('video', recordedVideoBlob, `attendance.${ext}`);
     formData.append('department', department);
     formData.append('section', section);
+    formData.append('year', yearValue);
 
     try {
       const response = await fetch(`${API_BASE}/mark-attendance-video`, {
