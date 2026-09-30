@@ -18,15 +18,44 @@ except Exception as e:
 
 
 class ApiPathMiddleware:
+    """Restore the real /api/... path after Vercel's rewrite to /api/index.py.
+
+    vercel.json passes the original path in the ?__p= query parameter, which is
+    the most reliable signal. Header-based fallbacks are kept for safety.
+    """
+
     def __init__(self, application):
         self.application = application
 
     def __call__(self, environ, start_response):
-        raw_uri = environ.get("REQUEST_URI") or environ.get("RAW_URI") or environ.get("HTTP_X_MATCHED_PATH")
-        if raw_uri:
-            clean_path = raw_uri.split("?")[0]
-            if clean_path and clean_path not in ("/api/index.py", "/api/index"):
-                environ["PATH_INFO"] = clean_path
+        from urllib.parse import parse_qsl, urlencode
+
+        query = environ.get("QUERY_STRING", "")
+        params = parse_qsl(query, keep_blank_values=True)
+        real = None
+        rest = []
+        for k, v in params:
+            if k == "__p" and real is None:
+                real = v
+            else:
+                rest.append((k, v))
+
+        if real is not None:
+            environ["PATH_INFO"] = "/api/" + real.strip("/") if real.strip("/") else "/api"
+            environ["QUERY_STRING"] = urlencode(rest)
+        else:
+            current = environ.get("PATH_INFO", "")
+            if current in ("/api/index.py", "/api/index"):
+                raw = (
+                    environ.get("HTTP_X_VERCEL_FORWARDED_PATH")
+                    or environ.get("HTTP_X_MATCHED_PATH")
+                    or environ.get("REQUEST_URI")
+                    or environ.get("RAW_URI")
+                )
+                if raw:
+                    clean = raw.split("?")[0]
+                    if clean and clean not in ("/api/index.py", "/api/index"):
+                        environ["PATH_INFO"] = clean
 
         return self.application(environ, start_response)
 
