@@ -80,8 +80,19 @@ class TestStudentManagement:
         })
         self.admin_token = res.get_json()["token"]
 
-    def test_register_student(self, test_client):
+    def test_register_student(self, test_client, monkeypatch):
         img_bytes = create_dummy_image_bytes()
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
+        monkeypatch.setattr(
+            face_engine,
+            "extract_faces",
+            lambda image: [{"score": 1.0, "embedding": np.ones(512, dtype=np.float32)}],
+        )
         res = test_client.post(
             "/register-student",
             headers={"Authorization": f"Bearer {self.admin_token}"},
@@ -102,6 +113,12 @@ class TestStudentManagement:
     def test_register_person_multiple_photos(self, test_client, monkeypatch):
         img_bytes = create_dummy_image_bytes()
         embedding = np.ones(512, dtype=np.float32)
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
         monkeypatch.setattr(
             face_engine,
             "extract_faces",
@@ -174,13 +191,44 @@ class TestFaceRecognitionLogic:
 
 
 class TestAttendanceMarking:
-    def test_mark_attendance_endpoint(self, test_client):
+    def test_mark_attendance_requires_face_engine(self, test_client, monkeypatch):
+        login_res = test_client.post("/login", json={
+            "reg_number": "ADMIN01",
+            "password": "Admin@123"
+        })
+        token = login_res.get_json()["token"]
+        before = db_session.query(AttendanceRecord).count()
+        monkeypatch.setattr(face_engine, "is_ready", lambda: False)
+
+        res = test_client.post(
+            "/mark-attendance",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "department": "CSE",
+                "section": "A",
+                "photos": (BytesIO(create_dummy_image_bytes()), "classroom.jpg")
+            },
+            content_type="multipart/form-data"
+        )
+
+        assert res.status_code == 503
+        assert res.get_json()["code"] == "FACE_ENGINE_UNAVAILABLE"
+        assert db_session.query(AttendanceRecord).count() == before
+
+    def test_mark_attendance_endpoint(self, test_client, monkeypatch):
         login_res = test_client.post("/login", json={
             "reg_number": "ADMIN01",
             "password": "Admin@123"
         })
         token = login_res.get_json()["token"]
 
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
+        monkeypatch.setattr(face_engine, "extract_faces", lambda image: [])
         img_bytes = create_dummy_image_bytes()
         res = test_client.post(
             "/mark-attendance",

@@ -45,6 +45,18 @@ ALLOWED_VIDEO_EXTENSIONS = {"mp4", "webm", "mov", "avi", "mkv"}
 # classroom video, and roughly how many frames per second of footage.
 VIDEO_MAX_FRAMES = int(os.environ.get("VIDEO_MAX_FRAMES", 15))
 VIDEO_SAMPLE_FPS = float(os.environ.get("VIDEO_SAMPLE_FPS", 1.0))
+FACE_ENGINE_UNAVAILABLE_MESSAGE = (
+    "Face recognition is not available on this server, so attendance was not changed. "
+    "Deploy the backend with InsightFace and ONNX Runtime enabled, then try again."
+)
+
+
+def face_engine_unavailable_response():
+    return jsonify({
+        "success": False,
+        "code": "FACE_ENGINE_UNAVAILABLE",
+        "message": FACE_ENGINE_UNAVAILABLE_MESSAGE
+    }), 503
 
 
 def allowed_video_file(filename: str) -> bool:
@@ -336,6 +348,9 @@ def register_student():
             "message": "Registration number and full name are required."
         }), 400
 
+    if not face_engine.is_ready():
+        return face_engine_unavailable_response()
+
     session = db_session()
     existing_user = session.query(User).filter_by(reg_number=reg_number).first()
     if existing_user:
@@ -466,6 +481,9 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
     `units_processed` is however many photos/frames were actually analyzed.
     `unit_key` lets the response label that count appropriately.
     """
+    if not face_engine.is_ready():
+        return face_engine_unavailable_response()
+
     session = db_session()
     threshold = float(os.environ.get("COSINE_SIMILARITY_THRESHOLD", DEFAULT_THRESHOLD))
     match_result = face_engine.match_faces_against_roster(
@@ -474,10 +492,6 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
 
     matched_ids = match_result["matched_user_ids"]
     unknown_faces = match_result["unknown_count"]
-
-    # In test/fallback mode if engine was not ready and no detections, simulate for verification
-    if not face_engine.is_ready() and len(all_detected_embeddings) == 0 and len(candidate_roster) > 0:
-        matched_ids.add(candidate_roster[0]["user_id"])
 
     today = date.today()
     now = datetime.utcnow()
@@ -557,6 +571,9 @@ def mark_attendance():
     if not dept or not section:
         return jsonify({"success": False, "message": "Department and Section are required."}), 400
 
+    if not face_engine.is_ready():
+        return face_engine_unavailable_response()
+
     # Retrieve uploaded photos (supports multiple keys named 'photos' or array)
     uploaded_files = request.files.getlist("photos")
     if not uploaded_files or len(uploaded_files) == 0 or uploaded_files[0].filename == "":
@@ -595,8 +612,6 @@ def mark_attendance():
                 faces = face_engine.extract_faces(img_cv)
                 for f in faces:
                     all_detected_embeddings.append(f["embedding"])
-        else:
-            print("[MarkAttendance] Face engine not active. Simulating mock detection for testing.")
 
     return _finalize_attendance(
         dept, section, year, students, candidate_roster,
@@ -682,6 +697,9 @@ def mark_attendance_video():
             "message": "Video attendance is unavailable in this deployment. Use photo attendance or run the full backend locally."
         }), 503
 
+    if not face_engine.is_ready():
+        return face_engine_unavailable_response()
+
     students, candidate_roster, error = _load_roster(dept, section, year)
     if error:
         return error
@@ -723,8 +741,6 @@ def mark_attendance_video():
             faces = face_engine.extract_faces(frame)
             for f in faces:
                 all_detected_embeddings.append(f["embedding"])
-        else:
-            print("[MarkAttendanceVideo] Face engine not active. Simulating mock detection for testing.")
 
     return _finalize_attendance(
         dept, section, year, students, candidate_roster,
