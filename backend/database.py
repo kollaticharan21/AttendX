@@ -300,7 +300,7 @@ def seed_default_admin():
             )
             session.add(new_admin)
             session.commit()
-            print(f"[AttendX DB] Seeded default admin: {admin_reg} / {admin_pass}")
+            print(f"[AttendX DB] Seeded default admin: {admin_reg}")
     except Exception as e:
         session.rollback()
         print(f"[AttendX DB] Warning during admin seeding: {e}")
@@ -309,6 +309,10 @@ def seed_default_admin():
 
 
 def seed_default_students():
+    if os.environ.get("SEED_DEMO_DATA", "true").strip().lower() not in {"1", "true", "yes"}:
+        print("[AttendX DB] Demo student seeding is disabled.")
+        return
+
     session = db_session()
     try:
         student_count = session.query(User).filter_by(role="student").count()

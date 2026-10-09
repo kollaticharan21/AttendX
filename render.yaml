@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: attendx-backend
+    runtime: docker
+    plan: standard
+    region: singapore
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/health
+    disk:
+      name: attendx-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////var/data/attendx.db
+      - key: ATTENDX_STORAGE_DIR
+        value: /var/data/storage
+      - key: HOME
+        value: /var/data
+      - key: DEFAULT_ADMIN_REG
+        value: ADMIN01
+      - key: SEED_DEMO_DATA
+        value: "false"
+      - key: DEFAULT_ADMIN_PASS
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true

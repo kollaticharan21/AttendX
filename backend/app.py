@@ -27,10 +27,13 @@ CORS(
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-if is_serverless():
-    STORAGE_DIR = os.path.join(tempfile.gettempdir(), "attendx_storage")
-else:
-    STORAGE_DIR = os.path.join(BASE_DIR, "storage")
+STORAGE_DIR = os.path.abspath(os.environ.get(
+    "ATTENDX_STORAGE_DIR",
+    os.path.join(
+        tempfile.gettempdir() if is_serverless() else BASE_DIR,
+        "attendx_storage" if is_serverless() else "storage",
+    ),
+))
 
 PROFILES_DIR = os.path.join(STORAGE_DIR, "profiles")
 ATTENDANCE_DIR = os.path.join(STORAGE_DIR, "attendance")
@@ -116,8 +119,9 @@ def health_check():
         db_error = str(e)
 
     from database import DATABASE_URL, _find_seed_db
+    face_engine_ready = face_engine.is_ready()
     return jsonify({
-        "status": "healthy" if db_status == "ok" else "degraded",
+        "status": "healthy" if db_status == "ok" and face_engine_ready else "degraded",
         "service": "AttendX Backend",
         "timestamp": datetime.utcnow().isoformat(),
         "database": {
@@ -128,7 +132,7 @@ def health_check():
             "seed_db_found": _find_seed_db()
         },
         "face_engine": {
-            "initialized": face_engine.is_ready(),
+            "initialized": face_engine_ready,
             "using_gpu": face_engine.using_gpu,
             "model": face_engine.model_name,
             "det_size": face_engine.det_size
@@ -365,6 +369,7 @@ def register_student():
         uploaded_photos = request.files.getlist("photo")
 
     first_photo_filename = None
+    saved_photo_paths = []
     extracted_embeddings = []
 
     for idx, photo_file in enumerate(uploaded_photos):
@@ -378,9 +383,7 @@ def register_student():
         file_bytes = photo_file.read()
         with open(save_path, "wb") as f:
             f.write(file_bytes)
-
-        if first_photo_filename is None:
-            first_photo_filename = saved_filename
+        saved_photo_paths.append(save_path)
 
         # Extract face embedding with InsightFace
         if face_engine.is_ready():
@@ -388,14 +391,25 @@ def register_student():
             if img_cv is not None:
                 detected = face_engine.extract_faces(img_cv)
                 if detected:
+                    if first_photo_filename is None:
+                        first_photo_filename = saved_filename
                     best_face = max(detected, key=lambda x: x["score"])
                     extracted_embeddings.append(best_face["embedding"])
                 else:
                     print(f"[Register] Warning: No face detected in photo #{idx+1} for {reg_number}.")
-        else:
-            # Simulation/fallback for environments without InsightFace weights
-            v = np.random.randn(512).astype(np.float32)
-            extracted_embeddings.append(v / np.linalg.norm(v))
+
+    if not extracted_embeddings:
+        for saved_path in saved_photo_paths:
+            try:
+                os.remove(saved_path)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                app.logger.warning("Could not remove unusable profile photo %s: %s", saved_path, e)
+        return jsonify({
+            "success": False,
+            "message": "No face was detected in the uploaded photos. Use a clear, well-lit photo showing one student's face."
+        }), 422
 
     # Calculate final unified embedding across all valid sample photos
     final_embedding = None
@@ -471,6 +485,12 @@ def _load_roster(dept: str, section: str, year: str):
                     "embedding": emb_rec.get_vector()
                 })
 
+    if not candidate_roster:
+        return None, None, (jsonify({
+            "success": False,
+            "message": f"No face profiles are available for {dept} - Section {section}. Register students with clear face photos first."
+        }), 409)
+
     return students, candidate_roster, None
 
 
@@ -490,8 +510,20 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
         all_detected_embeddings, candidate_roster, threshold=threshold
     )
 
+    if not all_detected_embeddings:
+        return jsonify({
+            "success": False,
+            "message": "No faces were detected in the submitted image(s). Attendance was not changed. Use clear, well-lit classroom photos."
+        }), 422
+
     matched_ids = match_result["matched_user_ids"]
     unknown_faces = match_result["unknown_count"]
+
+    if not matched_ids:
+        return jsonify({
+            "success": False,
+            "message": "No enrolled students were recognized. Attendance was not changed. Check the student face profiles and submit a clearer photo."
+        }), 422
 
     today = date.today()
     now = datetime.utcnow()

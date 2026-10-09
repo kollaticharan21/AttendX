@@ -68,6 +68,15 @@ class TestAuthentication:
         res = test_client.post("/login", json={})
         assert res.status_code == 400
 
+    def test_health_reports_face_engine_unavailable(self, test_client, monkeypatch):
+        monkeypatch.setattr(face_engine, "is_ready", lambda: False)
+
+        res = test_client.get("/api/health")
+
+        assert res.status_code == 200
+        assert res.get_json()["status"] == "degraded"
+        assert res.get_json()["face_engine"]["initialized"] is False
+
 
 class TestStudentManagement:
     admin_token = None
@@ -109,6 +118,31 @@ class TestStudentManagement:
         data = res.get_json()
         assert data["success"] is True
         assert data["user"]["reg_number"] == "21B01A0599"
+
+    def test_register_student_rejects_photo_without_face(self, test_client, monkeypatch):
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
+        monkeypatch.setattr(face_engine, "extract_faces", lambda image: [])
+
+        res = test_client.post(
+            "/register-student",
+            headers={"Authorization": f"Bearer {self.admin_token}"},
+            data={
+                "reg_number": "NOFACE01",
+                "full_name": "No Face Student",
+                "department": "CSE",
+                "section": "A",
+                "photo": (BytesIO(create_dummy_image_bytes()), "no_face.jpg")
+            },
+            content_type="multipart/form-data"
+        )
+
+        assert res.status_code == 422
+        assert db_session.query(User).filter_by(reg_number="NOFACE01").first() is None
 
     def test_register_person_multiple_photos(self, test_client, monkeypatch):
         img_bytes = create_dummy_image_bytes()
@@ -215,6 +249,77 @@ class TestAttendanceMarking:
         assert res.get_json()["code"] == "FACE_ENGINE_UNAVAILABLE"
         assert db_session.query(AttendanceRecord).count() == before
 
+    def test_mark_attendance_rejects_photo_without_faces(self, test_client, monkeypatch):
+        login_res = test_client.post("/login", json={
+            "reg_number": "ADMIN01",
+            "password": "Admin@123"
+        })
+        token = login_res.get_json()["token"]
+        before = db_session.query(AttendanceRecord).count()
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(face_engine, "extract_faces", lambda image: [])
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
+
+        res = test_client.post(
+            "/mark-attendance",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "department": "CSE",
+                "section": "A",
+                "photos": (BytesIO(create_dummy_image_bytes()), "empty_classroom.jpg")
+            },
+            content_type="multipart/form-data"
+        )
+
+        assert res.status_code == 422
+        assert db_session.query(AttendanceRecord).count() == before
+
+    def test_mark_attendance_rejects_no_roster_matches(self, test_client, monkeypatch):
+        login_res = test_client.post("/login", json={
+            "reg_number": "ADMIN01",
+            "password": "Admin@123"
+        })
+        token = login_res.get_json()["token"]
+        before = db_session.query(AttendanceRecord).count()
+        monkeypatch.setattr(face_engine, "is_ready", lambda: True)
+        monkeypatch.setattr(
+            face_engine,
+            "read_image_from_bytes",
+            lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
+        )
+        monkeypatch.setattr(
+            face_engine,
+            "extract_faces",
+            lambda image: [{"embedding": np.ones(512, dtype=np.float32)}],
+        )
+        monkeypatch.setattr(
+            face_engine,
+            "match_faces_against_roster",
+            lambda *args, **kwargs: {
+                "matched_user_ids": set(),
+                "matches": [],
+                "unknown_count": 1,
+            },
+        )
+
+        res = test_client.post(
+            "/mark-attendance",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "department": "CSE",
+                "section": "A",
+                "photos": (BytesIO(create_dummy_image_bytes()), "unmatched.jpg")
+            },
+            content_type="multipart/form-data"
+        )
+
+        assert res.status_code == 422
+        assert db_session.query(AttendanceRecord).count() == before
+
     def test_mark_attendance_endpoint(self, test_client, monkeypatch):
         login_res = test_client.post("/login", json={
             "reg_number": "ADMIN01",
@@ -228,7 +333,17 @@ class TestAttendanceMarking:
             "read_image_from_bytes",
             lambda image: np.zeros((1, 1, 3), dtype=np.uint8),
         )
-        monkeypatch.setattr(face_engine, "extract_faces", lambda image: [])
+        student = (
+            db_session.query(User)
+            .filter_by(role="student", department="CSE", section="A")
+            .first()
+        )
+        embedding = student.face_embeddings[0].get_vector()
+        monkeypatch.setattr(
+            face_engine,
+            "extract_faces",
+            lambda image: [{"embedding": embedding}],
+        )
         img_bytes = create_dummy_image_bytes()
         res = test_client.post(
             "/mark-attendance",
