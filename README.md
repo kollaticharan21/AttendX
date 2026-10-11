@@ -6,6 +6,9 @@ The website is hosted on Vercel, and its API is hosted on Render. Face recogniti
 needs InsightFace and ONNX Runtime, which are not included in the Vercel function.
 The Render Blueprint in `render.yaml` creates the full Python backend and a
 persistent disk for the database, uploaded photos, and face-recognition model.
+Until that Render service has been deployed and passes its health check, `vercel.json`
+routes API requests to the repository's Vercel Python handler instead of the
+unavailable Render hostname.
 
 ### First-time setup
 
@@ -22,7 +25,8 @@ persistent disk for the database, uploaded photos, and face-recognition model.
 4. Only after Render is healthy, update the Vercel rewrite in `vercel.json` to
    send `/api/*` requests to `https://attendx-backend.onrender.com/api/:path*`
    and deploy that Vercel change. This keeps the website from routing requests
-   to a backend before it is ready.
+   to a backend before it is ready. The Vercel Python handler does not include
+   InsightFace, so face recognition requires the healthy Render backend.
 5. Sign in to the live site as `ADMIN01` with the password chosen in step 2.
    Register students with their photos on the live site so the new backend can
    create their face embeddings before taking attendance.
