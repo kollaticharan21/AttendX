@@ -377,38 +377,52 @@
   }
   .attendance-fab-wrap:hover .attendance-fab-label{ opacity:1; transform:translateY(0); }
 
-  .attendance-picker{
-    position:fixed;
-    right:32px;
-    bottom:106px;
-    z-index:50;
+  .attendance-modal-picker{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 20px;
+    background:rgba(31,58,109,0.04);
+    border-bottom:1px solid rgba(0,0,0,0.06);
+  }
+  .attendance-modal-picker .picker-group{
     display:flex;
     flex-direction:column;
-    gap:8px;
-    align-items:flex-end;
+    gap:3px;
+    flex:1;
   }
-  .attendance-picker select{
+  .attendance-modal-picker label{
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--navy-soft);
+  }
+  .attendance-modal-picker select{
+    width:100%;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#fff;
     font-family:'Inter', sans-serif;
-    font-size:12.5px;
+    font-size:13px;
     font-weight:600;
     color:var(--navy);
-    background:var(--glass-fill);
-    border:1px solid var(--glass-border);
-    backdrop-filter:blur(16px) saturate(160%);
-    -webkit-backdrop-filter:blur(16px) saturate(160%);
-    padding:7px 12px;
-    border-radius:999px;
-    box-shadow:var(--shadow-soft);
     cursor:pointer;
     outline:none;
-    min-width:150px;
+    transition:border-color .2s ease;
+  }
+  .attendance-modal-picker select:focus{
+    border-color:var(--orange);
+    outline:2px solid rgba(217,106,22,0.25);
   }
 
   @media (max-width:640px){
     .attendance-fab{ right:20px; bottom:20px; width:58px; height:58px; }
     .attendance-fab-label{ display:none; }
-    .attendance-picker{ right:20px; bottom:86px; }
-    .attendance-picker select{ font-size:11.5px; padding:6px 10px; min-width:120px; }
+    .attendance-modal-picker{ padding:10px 14px; gap:6px; }
+    .attendance-modal-picker select{ font-size:12px; padding:6px 6px; }
   }
  
   /* ---------- Shared dark overlay ---------- */
@@ -829,16 +843,6 @@
       });
     });
   </script>
-  <div class="attendance-picker">
-    <select id="attendanceDeptSelect" aria-label="Select department for attendance"></select>
-    <select id="attendanceSectionSelect" aria-label="Select section for attendance"></select>
-    <select id="attendanceYearSelect" aria-label="Select year for attendance">
-      <option value="1">1st Year</option>
-      <option value="2" selected>2nd Year</option>
-      <option value="3">3rd Year</option>
-      <option value="4">4th Year</option>
-    </select>
-  </div>
   <div class="attendance-fab-wrap">
   <span class="attendance-fab-label">Take Attendance</span>
   <button type="button" class="attendance-fab" id="attendanceFab" aria-label="Take attendance">
@@ -861,6 +865,27 @@
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
+    </div>
+
+    <!-- Active Class Selector prominently inside the modal -->
+    <div class="attendance-modal-picker" id="modalPicker">
+      <div class="picker-group">
+        <label for="attendanceDeptSelect">Department</label>
+        <select id="attendanceDeptSelect" aria-label="Select department for attendance"></select>
+      </div>
+      <div class="picker-group">
+        <label for="attendanceSectionSelect">Section</label>
+        <select id="attendanceSectionSelect" aria-label="Select section for attendance"></select>
+      </div>
+      <div class="picker-group">
+        <label for="attendanceYearSelect">Year</label>
+        <select id="attendanceYearSelect" aria-label="Select year for attendance">
+          <option value="1">1st Year</option>
+          <option value="2" selected>2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
+      </div>
     </div>
  
     <!-- Step 1: choose camera or gallery -->
@@ -1191,19 +1216,66 @@
     }
   }
 
-  function showResultError(message) {
+  function showResultError(errData) {
     overlayTitle.textContent = 'Attendance Not Marked';
+    const message = typeof errData === 'string' ? errData : (errData.message || 'No enrolled students were recognized.');
+    const suggestedDept = typeof errData === 'object' ? errData.suggested_dept : null;
+    const suggestedSection = typeof errData === 'object' ? errData.suggested_section : null;
+    const suggestedYear = typeof errData === 'object' ? errData.suggested_year : null;
+
+    let switchBtnHtml = '';
+    if (suggestedDept && suggestedSection) {
+      switchBtnHtml = `
+        <div style="margin:16px 0 10px;">
+          <button type="button" class="submit-btn" id="switchClassBtn" style="background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%); width:100%; padding:13px 18px; font-size:14px; box-shadow:0 8px 20px -4px rgba(217,106,22,0.4);">
+            Switch to ${suggestedDept} - Section ${suggestedSection} & Re-mark
+          </button>
+        </div>
+      `;
+    }
+
     resultsBody.innerHTML = `
       <div style="text-align:center; padding:16px 8px;">
         <div style="width:52px; height:52px; border-radius:50%; background:#FBEAEA; color:#C0392B; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <p style="font-weight:700; margin:0 0 8px; font-size:15px; color:#C0392B;">${message || 'No enrolled students were recognized.'}</p>
-        <p style="font-size:13px; color:#7a7265; margin:0 0 18px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled with reference photos.</p>
-        <button type="button" class="submit-btn" id="resultTryAgainBtn" style="width:auto; padding:10px 24px;">Try Again</button>
+        <p style="font-weight:700; margin:0 0 8px; font-size:15px; color:#C0392B;">${message}</p>
+        <p style="font-size:13px; color:#7a7265; margin:0 0 16px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled under this department and section.</p>
+        ${switchBtnHtml}
+        <button type="button" class="retake-btn" id="resultTryAgainBtn" style="width:auto; padding:10px 24px; margin-top:8px;">Try Again</button>
       </div>
     `;
     showScreen(resultsScreen);
+
+    if (suggestedDept && suggestedSection) {
+      const switchBtn = document.getElementById('switchClassBtn');
+      if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+          const deptSel = document.getElementById('attendanceDeptSelect');
+          const secSel = document.getElementById('attendanceSectionSelect');
+          const yrSel = document.getElementById('attendanceYearSelect');
+          if (deptSel) {
+            deptSel.value = suggestedDept;
+            const sections = (typeof sectionsByDept !== 'undefined' && sectionsByDept[suggestedDept]) || ["A", "B", "C", "D"];
+            secSel.innerHTML = '';
+            sections.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s;
+              opt.textContent = `Section ${s}`;
+              secSel.appendChild(opt);
+            });
+            secSel.value = suggestedSection;
+          }
+          if (yrSel && suggestedYear) yrSel.value = suggestedYear;
+          if (recordedVideoBlob) {
+            submitVideo();
+          } else {
+            submitPhoto();
+          }
+        });
+      }
+    }
+
     const tryAgain = document.getElementById('resultTryAgainBtn');
     if (tryAgain) {
       tryAgain.addEventListener('click', () => {
@@ -1255,7 +1327,7 @@
           overlayTitle.textContent = 'Attendance Results';
           showScreen(resultsScreen);
         } else {
-          showResultError(data.message || 'Could not recognize any enrolled students from this photo.');
+          showResultError(data);
         }
       } catch (err) {
         showResultError('Could not reach backend. Please check network connectivity.');
@@ -1389,7 +1461,7 @@
         overlayTitle.textContent = 'Attendance Results';
         showScreen(resultsScreen);
       } else {
-        showResultError(data.message || 'No enrolled students were recognized in the video.');
+        showResultError(data);
       }
     } catch (err) {
       showResultError('Could not reach backend. Please check network connectivity.');

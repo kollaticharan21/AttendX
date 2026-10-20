@@ -536,10 +536,40 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
     unknown_faces = match_result["unknown_count"]
 
     if not matched_ids:
+        # Cross-check against other enrolled students to check if face belongs to another section/dept
+        all_students = session.query(User).filter(User.role == "student").all()
+        other_roster = []
+        for s in all_students:
+            if s.department != dept or s.section != section:
+                for fe in s.face_embeddings:
+                    other_roster.append({
+                        "user_id": s.id,
+                        "reg_number": s.reg_number,
+                        "name": s.full_name,
+                        "embedding": fe.get_vector()
+                    })
+        if other_roster:
+            cross_match = face_engine.match_faces_against_roster(
+                all_detected_embeddings, other_roster, threshold=threshold
+            )
+            cross_ids = cross_match["matched_user_ids"]
+            if cross_ids:
+                found_students = [s for s in all_students if s.id in cross_ids]
+                first_found = found_students[0]
+                names_str = ", ".join([f"{s.full_name} ({s.department} - Section {s.section})" for s in found_students])
+                return jsonify({
+                    "success": False,
+                    "code": "WRONG_SECTION_OR_DEPT",
+                    "message": f"Recognized {names_str}, but attendance was submitted for {dept} - Section {section}.",
+                    "suggested_dept": first_found.department,
+                    "suggested_section": first_found.section,
+                    "suggested_year": first_found.year or "2"
+                }), 422
+
         return jsonify({
             "success": False,
             "code": "NO_ROSTER_MATCHES",
-            "message": "No enrolled students were recognized. Attendance was not changed. Check the student face profiles and submit a clearer photo."
+            "message": f"No enrolled students from {dept} - Section {section} were recognized. Attendance was not changed. Check the student face profiles or pick the right section."
         }), 422
 
     today = date.today()

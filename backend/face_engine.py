@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Dict, Tuple, Optional, Any
 
 DEFAULT_DET_SIZE = (1280, 1280)
-DEFAULT_THRESHOLD = float(os.environ.get("COSINE_SIMILARITY_THRESHOLD", 0.44))
+DEFAULT_THRESHOLD = float(os.environ.get("COSINE_SIMILARITY_THRESHOLD", 0.38))
 MODEL_NAME = os.environ.get("INSIGHTFACE_MODEL", "buffalo_l")
 
 
@@ -165,12 +165,22 @@ class FaceRecognitionEngine:
 
         if self.engine_mode == "insightface" and self.app is not None:
             raw_faces = self.app.get(img)
+            if not raw_faces and img.shape[0] > 100 and img.shape[1] > 100:
+                try:
+                    import cv2
+                    scaled = cv2.resize(img, (0, 0), fx=1.33, fy=1.33, interpolation=cv2.INTER_LINEAR)
+                    scaled_faces = self.app.get(scaled)
+                    if scaled_faces:
+                        raw_faces = scaled_faces
+                except Exception:
+                    pass
+
             results = []
 
             for face in raw_faces:
                 det_score = float(face.det_score) if hasattr(face, "det_score") else 1.0
-                if det_score < 0.55:
-                    # Discard faint background noise or false positive detections
+                if det_score < 0.40:
+                    # Discard faint background noise
                     continue
 
                 emb = face.embedding.astype(np.float32)
@@ -184,7 +194,8 @@ class FaceRecognitionEngine:
                     "embedding": emb,
                 })
 
-            return results
+            if results:
+                return results
 
         elif self.engine_mode == "opencv" and self.haar_cascade is not None:
             import cv2
@@ -263,11 +274,11 @@ class FaceRecognitionEngine:
 
             if best_score >= threshold:
                 matched_student = roster[best_idx]
-                matched_user_ids.add(matched_student["user_id"])
+                matched_user_ids.add(matched_student.get("user_id"))
                 matches.append({
-                    "user_id": matched_student["user_id"],
-                    "reg_number": matched_student["reg_number"],
-                    "name": matched_student["name"],
+                    "user_id": matched_student.get("user_id"),
+                    "reg_number": matched_student.get("reg_number", ""),
+                    "name": matched_student.get("name", "Student"),
                     "similarity": round(best_score, 4)
                 })
             else:

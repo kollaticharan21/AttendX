@@ -1179,13 +1179,25 @@
           overlayTitle.textContent = data.success ? 'Attendance Marked ✓' : 'Attendance Not Marked';
 
           if (!data.success) {
+            let switchBtnHtml = '';
+            if (data.suggested_dept && data.suggested_section) {
+              const url = `dashboard.html?dept=${encodeURIComponent(data.suggested_dept)}&section=${encodeURIComponent(data.suggested_section)}&year=${encodeURIComponent(data.suggested_year || '2')}`;
+              switchBtnHtml = `
+                <div style="margin:14px 0 10px;">
+                  <a href="${url}" class="submit-btn" style="display:inline-block; text-decoration:none; background:linear-gradient(135deg, var(--orange) 0%, var(--orange-light) 100%); width:100%; padding:12px 16px; font-size:14px; box-sizing:border-box; color:#fff; border-radius:999px;">
+                    Go to ${data.suggested_dept} - Section ${data.suggested_section} Dashboard &rarr;
+                  </a>
+                </div>
+              `;
+            }
             resultBody.innerHTML = `
               <div style="text-align:center; padding:16px 8px;">
                 <div style="width:52px; height:52px; border-radius:50%; background:#FBEAEA; color:#C0392B; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 </div>
                 <p class="result-error" style="font-weight:700; margin:0 0 8px; font-size:15px; color:#C0392B;">${data.message || 'No enrolled students were recognized.'}</p>
-                <p style="font-size:13px; color:#7a7265; margin:0 0 18px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled with reference photos.</p>
+                <p style="font-size:13px; color:#7a7265; margin:0 0 18px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled under this department and section.</p>
+                ${switchBtnHtml}
                 <button type="button" class="result-done-btn" id="resultDoneBtn">Try Again</button>
               </div>
             `;
