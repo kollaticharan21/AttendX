@@ -526,6 +526,38 @@
   }
   .camera-status.is-hidden{ display:none; }
  
+  .camera-flip-btn{
+    position:absolute;
+    top:14px;
+    right:14px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:8px 14px;
+    background:rgba(13,20,32,0.78);
+    border:1px solid rgba(255,255,255,0.24);
+    border-radius:24px;
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    z-index:10;
+    transition:all .2s ease;
+  }
+  .camera-flip-btn:hover{
+    background:rgba(217,106,22,0.9);
+    border-color:rgba(255,255,255,0.45);
+    transform:scale(1.03);
+  }
+  .camera-flip-btn svg{
+    transition:transform .3s ease;
+  }
+  .camera-flip-btn:active svg{
+    transform:rotate(180deg);
+  }
+
   .camera-footer{
     display:flex; align-items:center; justify-content:center;
     gap:16px;
@@ -872,6 +904,19 @@
           <p class="choice-text-sub">Pan across the room, auto-detects everyone</p>
         </span>
       </button>
+
+      <button type="button" class="choice-option" id="chooseUploadVideoBtn">
+        <span class="choice-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M12 12v9m-4-4 4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>
+          <p class="choice-text-title">Upload a Video</p>
+          <p class="choice-text-sub">Select classroom video from phone or PC</p>
+        </span>
+      </button>
+      <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime,video/*" class="is-hidden" style="display:none;">
     </div>
  
     <!-- Step 2a: live camera view -->
@@ -879,6 +924,12 @@
       <div class="camera-body">
         <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
         <div class="camera-status" id="cameraStatus">Requesting camera access…</div>
+        <button type="button" class="camera-flip-btn" id="cameraFlipBtn" aria-label="Switch Camera" title="Switch between Front and Back Camera">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 7h-3m3 0v-3m0 3-4-4m-12 10H7m-3 0v3m0-3 4 4M21 12a9 9 0 0 1-15.36 6.36M3 12a9 9 0 0 1 15.36-6.36" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="cameraFacingLabel">Back Camera</span>
+        </button>
       </div>
       <div class="camera-footer">
         <button type="button" class="back-btn" id="cameraBackBtn">Back</button>
@@ -903,6 +954,12 @@
       <div class="camera-body">
         <video class="camera-video" id="videoRecordPreview" autoplay playsinline muted></video>
         <div class="camera-status" id="videoStatus">Requesting camera access…</div>
+        <button type="button" class="camera-flip-btn" id="videoFlipBtn" aria-label="Switch Camera" title="Switch between Front and Back Camera">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 7h-3m3 0v-3m0 3-4-4m-12 10H7m-3 0v3m0-3 4 4M21 12a9 9 0 0 1-15.36 6.36M3 12a9 9 0 0 1 15.36-6.36" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="videoFacingLabel">Back Camera</span>
+        </button>
       </div>
       <p class="choice-text-sub" id="videoTimerHint" style="text-align:center; margin:8px 0 0;">Slowly pan across the room. Recording stops automatically after 10s.</p>
       <div class="camera-footer">
@@ -952,12 +1009,16 @@
   const chooseCameraBtn= document.getElementById('chooseCameraBtn');
   const chooseGalleryBtn = document.getElementById('chooseGalleryBtn');
   const chooseVideoBtn  = document.getElementById('chooseVideoBtn');
+  const chooseUploadVideoBtn = document.getElementById('chooseUploadVideoBtn');
+  const videoFileInput = document.getElementById('videoFileInput');
 
   const cameraScreen   = document.getElementById('cameraScreen');
   const video          = document.getElementById('cameraVideo');
   const statusEl       = document.getElementById('cameraStatus');
   const captureBtn     = document.getElementById('captureBtn');
   const cameraBackBtn  = document.getElementById('cameraBackBtn');
+  const cameraFlipBtn  = document.getElementById('cameraFlipBtn');
+  const cameraFacingLabel = document.getElementById('cameraFacingLabel');
 
   const previewScreen  = document.getElementById('previewScreen');
   const canvas         = document.getElementById('cameraCanvas');
@@ -970,6 +1031,8 @@
   const videoRecordBtn     = document.getElementById('videoRecordBtn');
   const videoBackBtn       = document.getElementById('videoBackBtn');
   const videoTimerHint     = document.getElementById('videoTimerHint');
+  const videoFlipBtn       = document.getElementById('videoFlipBtn');
+  const videoFacingLabel   = document.getElementById('videoFacingLabel');
 
   const videoReviewScreen  = document.getElementById('videoReviewScreen');
   const videoReviewPlayer  = document.getElementById('videoReviewPlayer');
@@ -987,6 +1050,13 @@
   let recordedVideoBlob = null;
   let recordedVideoUrl = null;
   let recordTimeoutId = null;
+  let currentFacingMode = 'environment'; // Defaults to back camera for mobile phones
+
+  function updateFacingLabels() {
+    const text = currentFacingMode === 'environment' ? 'Back Camera' : 'Front Camera';
+    if (cameraFacingLabel) cameraFacingLabel.textContent = text;
+    if (videoFacingLabel) videoFacingLabel.textContent = text;
+  }
 
   function showScreen(screen){
     [choiceScreen, cameraScreen, previewScreen, videoScreen, videoReviewScreen, resultsScreen].forEach(s => s.classList.add('is-hidden'));
@@ -1017,25 +1087,48 @@
     }
   }
 
+  async function initCameraStream(facing, videoEl, statusEl, actionBtn) {
+    statusEl.textContent = 'Requesting camera access…';
+    statusEl.classList.remove('is-hidden');
+    if (actionBtn) actionBtn.classList.remove('is-hidden');
+    stopCameraStream();
+
+    const attempts = [
+      { video: { facingMode: { exact: facing } }, audio: false },
+      { video: { facingMode: facing }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    let lastErr = null;
+    for (const constraints of attempts) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoEl.srcObject = stream;
+        statusEl.classList.add('is-hidden');
+        currentFacingMode = facing;
+        updateFacingLabels();
+        return true;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+
+    console.error('Camera error:', lastErr);
+    statusEl.textContent = 'Camera access was denied or is unavailable. Please allow camera permission, or use "Upload from Gallery".';
+    statusEl.classList.remove('is-hidden');
+    if (actionBtn) actionBtn.classList.add('is-hidden');
+    return false;
+  }
+
+  async function toggleCameraFacing(videoEl, statusEl, actionBtn) {
+    const nextFacing = currentFacingMode === 'environment' ? 'user' : 'environment';
+    await initCameraStream(nextFacing, videoEl, statusEl, actionBtn);
+  }
+
   async function openCamera(){
     overlayTitle.textContent = 'Take a Photo';
     showScreen(cameraScreen);
-    statusEl.textContent = 'Requesting camera access…';
-    statusEl.classList.remove('is-hidden');
-
-    try{
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false
-      });
-      video.srcObject = stream;
-      statusEl.classList.add('is-hidden');
-    }catch(err){
-      console.error('Camera error:', err);
-      statusEl.textContent = 'Camera access was denied or is unavailable. Please allow camera permission, or use "Upload from Gallery" instead.';
-      statusEl.classList.remove('is-hidden');
-      captureBtn.classList.add('is-hidden');
-    }
+    await initCameraStream(currentFacingMode || 'environment', video, statusEl, captureBtn);
   }
 
   function capturePhoto(){
@@ -1071,26 +1164,77 @@
     img.src = objectUrl;
   }
 
+  function isCanvasBlankOrDark(cvs) {
+    try {
+      const ctx = cvs.getContext('2d');
+      const w = Math.min(cvs.width, 100);
+      const h = Math.min(cvs.height, 100);
+      if (w <= 0 || h <= 0) return true;
+      const sampleCanvas = document.createElement('canvas');
+      sampleCanvas.width = w;
+      sampleCanvas.height = h;
+      const sampleCtx = sampleCanvas.getContext('2d');
+      sampleCtx.drawImage(cvs, 0, 0, w, h);
+      const imgData = sampleCtx.getImageData(0, 0, w, h).data;
+      let sum = 0, sumSq = 0, count = (w * h);
+      for (let i = 0; i < imgData.length; i += 4) {
+        const gray = 0.299 * imgData[i] + 0.587 * imgData[i + 1] + 0.114 * imgData[i + 2];
+        sum += gray;
+        sumSq += gray * gray;
+      }
+      const mean = sum / count;
+      const variance = (sumSq / count) - (mean * mean);
+      const stdDev = Math.sqrt(Math.max(0, variance));
+      return mean < 10 || stdDev < 8;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showResultError(message) {
+    overlayTitle.textContent = 'Attendance Not Marked';
+    resultsBody.innerHTML = `
+      <div style="text-align:center; padding:16px 8px;">
+        <div style="width:52px; height:52px; border-radius:50%; background:#FBEAEA; color:#C0392B; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <p style="font-weight:700; margin:0 0 8px; font-size:15px; color:#C0392B;">${message || 'No enrolled students were recognized.'}</p>
+        <p style="font-size:13px; color:#7a7265; margin:0 0 18px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled with reference photos.</p>
+        <button type="button" class="submit-btn" id="resultTryAgainBtn" style="width:auto; padding:10px 24px;">Try Again</button>
+      </div>
+    `;
+    showScreen(resultsScreen);
+    const tryAgain = document.getElementById('resultTryAgainBtn');
+    if (tryAgain) {
+      tryAgain.addEventListener('click', () => {
+        overlayTitle.textContent = 'Mark Attendance';
+        showScreen(choiceScreen);
+      });
+    }
+  }
+
   async function submitPhoto(){
     const department = document.getElementById('attendanceDeptSelect').value;
     const section = document.getElementById('attendanceSectionSelect').value;
     const yearValue = document.getElementById('attendanceYearSelect').value;
 
     if (!department || !section) {
-      overlayTitle.textContent = 'Please pick a department and section first';
+      alert('Please pick a department and section first.');
+      return;
+    }
+
+    if (isCanvasBlankOrDark(canvas)) {
+      showResultError('The selected image is blank, too dark, or contains no visible details. Please capture or select a clear photo of students.');
       return;
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Marking...';
+    submitBtn.textContent = 'Recognizing faces…';
 
     const token = localStorage.getItem('token');
 
     canvas.toBlob(async (blob) => {
       const formData = new FormData();
-      // NOTE: backend expects the plural field name "photos" (it reads
-      // request.files.getlist("photos")) — using "photo" here silently
-      // sends the file nowhere and the roster never gets matched.
       formData.append("photos", blob, "attendance.jpg");
       formData.append("department", department);
       formData.append("section", section);
@@ -1106,15 +1250,15 @@
         });
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok && data.success) {
           renderResults(data.summary);
           overlayTitle.textContent = 'Attendance Results';
           showScreen(resultsScreen);
         } else {
-          overlayTitle.textContent = 'Error: ' + data.message;
+          showResultError(data.message || 'Could not recognize any enrolled students from this photo.');
         }
       } catch (err) {
-        overlayTitle.textContent = 'Could not reach backend';
+        showResultError('Could not reach backend. Please check network connectivity.');
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit';
@@ -1122,7 +1266,7 @@
     }, 'image/jpeg', 0.9);
   }
 
-  // ---------------- Video recording (Record a Video option) ----------------
+  // ---------------- Video recording & Video upload ----------------
 
   function pickRecorderMimeType() {
     const candidates = [
@@ -1140,25 +1284,22 @@
 
     overlayTitle.textContent = 'Record a Video';
     showScreen(videoScreen);
-    videoStatus.textContent = 'Requesting camera access…';
-    videoStatus.classList.remove('is-hidden');
-    videoRecordBtn.classList.remove('is-hidden');
     videoRecordBtn.classList.remove('is-recording');
     videoTimerHint.textContent = `Slowly pan across the room. Recording stops automatically after ${RECORD_SECONDS}s.`;
 
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false
-      });
-      videoRecordPreview.srcObject = stream;
-      videoStatus.classList.add('is-hidden');
-    } catch (err) {
-      console.error('Camera error:', err);
-      videoStatus.textContent = 'Camera access was denied or is unavailable.';
-      videoStatus.classList.remove('is-hidden');
-      videoRecordBtn.classList.add('is-hidden');
-    }
+    await initCameraStream(currentFacingMode || 'environment', videoRecordPreview, videoStatus, videoRecordBtn);
+  }
+
+  function handleVideoFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+    recordedVideoBlob = file;
+    recordedVideoUrl = URL.createObjectURL(file);
+    videoReviewPlayer.src = recordedVideoUrl;
+    overlayTitle.textContent = 'Review Video';
+    showScreen(videoReviewScreen);
   }
 
   function startOrStopRecording() {
@@ -1218,13 +1359,13 @@
     const yearValue = document.getElementById('attendanceYearSelect').value;
 
     if (!department || !section) {
-      overlayTitle.textContent = 'Please pick a department and section first';
+      alert('Please pick a department and section first.');
       return;
     }
     if (!recordedVideoBlob) return;
 
     submitVideoBtn.disabled = true;
-    submitVideoBtn.textContent = 'Marking...';
+    submitVideoBtn.textContent = 'Recognizing faces…';
 
     const token = localStorage.getItem('token');
     const ext = (recordedVideoBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
@@ -1243,15 +1384,15 @@
       });
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         renderResults(data.summary);
         overlayTitle.textContent = 'Attendance Results';
         showScreen(resultsScreen);
       } else {
-        overlayTitle.textContent = 'Error: ' + data.message;
+        showResultError(data.message || 'No enrolled students were recognized in the video.');
       }
     } catch (err) {
-      overlayTitle.textContent = 'Could not reach backend';
+      showResultError('Could not reach backend. Please check network connectivity.');
     } finally {
       submitVideoBtn.disabled = false;
       submitVideoBtn.textContent = 'Submit';
@@ -1259,13 +1400,12 @@
   }
 
   function renderResults(summary){
-    // present_list / absent_list are objects: { name, reg_number, reg_last4 }
-    const presentHtml = summary.present_list.length
-      ? summary.present_list.map(p => `<li>${p.name} (${p.reg_last4})</li>`).join('')
+    const presentHtml = summary.present_list && summary.present_list.length
+      ? summary.present_list.map(p => `<li>${p.name} (${p.reg_last4 || p.reg_number})</li>`).join('')
       : '<li class="empty-row">No one recognized</li>';
 
-    const absentHtml = summary.absent_list.length
-      ? summary.absent_list.map(p => `<li>${p.name} (${p.reg_last4})</li>`).join('')
+    const absentHtml = summary.absent_list && summary.absent_list.length
+      ? summary.absent_list.map(p => `<li>${p.name} (${p.reg_last4 || p.reg_number})</li>`).join('')
       : '<li class="empty-row">Everyone present</li>';
 
     const totalRegistered = summary.present_count + summary.absent_count;
@@ -1288,7 +1428,7 @@
           <span class="count-label">Total</span>
         </div>
       </div>
-      <p class="choice-text-sub" style="margin:0 0 14px;">Processed ${processedLabel} · ${summary.unknown_faces} unrecognized face(s).</p>
+      <p class="choice-text-sub" style="margin:0 0 14px;">Processed ${processedLabel} · ${summary.total_faces_detected || (summary.present_count + (summary.unknown_faces || 0))} face(s) detected · ${summary.unknown_faces || 0} unrecognized.</p>
       <div class="results-columns">
         <div class="results-col">
           <p class="results-col-title">Present</p>
@@ -1309,7 +1449,25 @@
   chooseCameraBtn.addEventListener('click', openCamera);
   chooseGalleryBtn.addEventListener('click', openGallery);
   chooseVideoBtn.addEventListener('click', openVideoRecorder);
+  if (chooseUploadVideoBtn) {
+    chooseUploadVideoBtn.addEventListener('click', () => {
+      if (videoFileInput) {
+        videoFileInput.value = '';
+        videoFileInput.click();
+      }
+    });
+  }
+  if (videoFileInput) {
+    videoFileInput.addEventListener('change', handleVideoFileUpload);
+  }
   galleryInput.addEventListener('change', handleGalleryFile);
+
+  if (cameraFlipBtn) {
+    cameraFlipBtn.addEventListener('click', () => toggleCameraFacing(video, statusEl, captureBtn));
+  }
+  if (videoFlipBtn) {
+    videoFlipBtn.addEventListener('click', () => toggleCameraFacing(videoRecordPreview, videoStatus, videoRecordBtn));
+  }
 
   cameraBackBtn.addEventListener('click', () => {
     stopCameraStream();

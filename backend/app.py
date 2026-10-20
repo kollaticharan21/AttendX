@@ -257,14 +257,29 @@ def get_photo(person_name_or_id: str):
     if not user:
         user = session.query(User).filter(User.full_name.ilike(person_param)).first()
 
-    if user and user.profile_photo_path:
-        full_photo_path = os.path.join(PROFILES_DIR, user.profile_photo_path)
-        if not os.path.exists(full_photo_path):
-            repo_path = os.path.join(BASE_DIR, "storage", "profiles", user.profile_photo_path)
-            if os.path.exists(repo_path):
-                full_photo_path = repo_path
-        if os.path.exists(full_photo_path):
-            return send_file(full_photo_path)
+    if user:
+        photo_name = user.profile_photo_path
+        if not photo_name and user.reg_number:
+            for search_dir in (PROFILES_DIR, os.path.join(BASE_DIR, "storage", "profiles")):
+                if os.path.isdir(search_dir):
+                    matches = [f for f in os.listdir(search_dir) if f.startswith(user.reg_number + "_") or f.startswith(user.reg_number + ".")]
+                    if matches:
+                        photo_name = matches[0]
+                        user.profile_photo_path = photo_name
+                        try:
+                            session.commit()
+                        except Exception:
+                            pass
+                        break
+
+        if photo_name:
+            full_photo_path = os.path.join(PROFILES_DIR, photo_name)
+            if not os.path.exists(full_photo_path):
+                repo_path = os.path.join(BASE_DIR, "storage", "profiles", photo_name)
+                if os.path.exists(repo_path):
+                    full_photo_path = repo_path
+            if os.path.exists(full_photo_path):
+                return send_file(full_photo_path)
 
     # Fallback SVG avatar with initials
     initials = "".join([part[0].upper() for part in person_param.split()[:2]]) or "U"
@@ -513,6 +528,7 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
     if not all_detected_embeddings:
         return jsonify({
             "success": False,
+            "code": "NO_FACES_DETECTED",
             "message": "No faces were detected in the submitted image(s). Attendance was not changed. Use clear, well-lit classroom photos."
         }), 422
 
@@ -522,6 +538,7 @@ def _finalize_attendance(dept, section, year, students, candidate_roster, all_de
     if not matched_ids:
         return jsonify({
             "success": False,
+            "code": "NO_ROSTER_MATCHES",
             "message": "No enrolled students were recognized. Attendance was not changed. Check the student face profiles and submit a clearer photo."
         }), 422
 

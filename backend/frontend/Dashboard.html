@@ -321,6 +321,38 @@
   }
   .camera-status.is-hidden{ display:none; }
 
+  .camera-flip-btn{
+    position:absolute;
+    top:14px;
+    right:14px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:8px 14px;
+    background:rgba(13,20,32,0.78);
+    border:1px solid rgba(255,255,255,0.24);
+    border-radius:24px;
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    z-index:10;
+    transition:all .2s ease;
+  }
+  .camera-flip-btn:hover{
+    background:rgba(217,106,22,0.9);
+    border-color:rgba(255,255,255,0.45);
+    transform:scale(1.03);
+  }
+  .camera-flip-btn svg{
+    transition:transform .3s ease;
+  }
+  .camera-flip-btn:active svg{
+    transform:rotate(180deg);
+  }
+
   .camera-footer{
     display:flex; align-items:center; justify-content:center;
     gap:16px;
@@ -344,6 +376,7 @@
   }
   .capture-btn:hover{ transform:scale(1.05); }
   .capture-btn:active{ transform:scale(0.95); }
+  .capture-btn.is-recording::after{ background:var(--danger); }
 
   .retake-btn, .use-photo-btn, .back-btn{
     padding:12px 22px;
@@ -419,10 +452,7 @@
   <div class="header">
     <h1 id="pageTitle">Dashboard</h1>
     <p class="sub" id="pageSub">Loading section details...</p>
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:14px;">
-      <a href="Departments.html" class="back-link" style="margin-top:0;">&larr; Back to Departments</a>
-      <a href="Register.html" id="registerPersonLink" style="display:none; font-size:13.5px; font-weight:600; color:var(--orange); text-decoration:none; padding:6px 14px; border-radius:999px; background:var(--glass-fill); border:1px solid var(--glass-border);">+ Register New Person</a>
-    </div>
+    <a href="departments.html" class="back-link">&larr; Back to Departments</a>
   </div>
 
   <div class="grid" id="peopleGrid"></div>
@@ -484,6 +514,32 @@
           </span>
         </button>
 
+        <button type="button" class="choice-option" id="chooseVideoBtn">
+          <span class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="13" height="12" rx="2.2" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M16.5 10.2 20 8v8l-3.5-2.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>
+            <p class="choice-text-title">Record a Video</p>
+            <p class="choice-text-sub">Pan across the room, auto-detects everyone</p>
+          </span>
+        </button>
+
+        <button type="button" class="choice-option" id="chooseUploadVideoBtn">
+          <span class="choice-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M12 12v9m-4-4 4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>
+            <p class="choice-text-title">Upload a Video</p>
+            <p class="choice-text-sub">Select classroom video from phone or PC</p>
+          </span>
+        </button>
+        <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime,video/*" class="is-hidden" style="display:none;">
+
         <p class="photo-queue-hint" id="queueHint">No photos selected yet — choose at least 1, up to 4.</p>
         <div class="photo-queue" id="photoQueue"></div>
 
@@ -497,6 +553,12 @@
         <div class="camera-body">
           <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
           <div class="camera-status" id="cameraStatus">Requesting camera access…</div>
+          <button type="button" class="camera-flip-btn" id="cameraFlipBtn" aria-label="Switch Camera" title="Switch between Front and Back Camera">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 7h-3m3 0v-3m0 3-4-4m-12 10H7m-3 0v3m0-3 4 4M21 12a9 9 0 0 1-15.36 6.36M3 12a9 9 0 0 1 15.36-6.36" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="cameraFacingLabel">Back Camera</span>
+          </button>
         </div>
         <div class="camera-footer">
           <button type="button" class="back-btn" id="cameraBackBtn">Back</button>
@@ -515,6 +577,36 @@
         </div>
       </div>
 
+      <!-- Video recording screen: pan across the room for a few seconds -->
+      <div id="videoScreen" class="is-hidden">
+        <div class="camera-body">
+          <video class="camera-video" id="videoRecordPreview" autoplay playsinline muted></video>
+          <div class="camera-status" id="videoStatus">Requesting camera access…</div>
+          <button type="button" class="camera-flip-btn" id="videoFlipBtn" aria-label="Switch Camera" title="Switch between Front and Back Camera">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 7h-3m3 0v-3m0 3-4-4m-12 10H7m-3 0v3m0-3 4 4M21 12a9 9 0 0 1-15.36 6.36M3 12a9 9 0 0 1 15.36-6.36" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="videoFacingLabel">Back Camera</span>
+          </button>
+        </div>
+        <p class="photo-queue-hint" id="videoTimerHint" style="text-align:center; margin:10px 0 0;">Slowly pan across the room. Recording stops automatically after 10s.</p>
+        <div class="camera-footer">
+          <button type="button" class="back-btn" id="videoBackBtn">Back</button>
+          <button type="button" class="capture-btn" id="videoRecordBtn" aria-label="Start recording"></button>
+        </div>
+      </div>
+
+      <!-- Review the recorded video before submitting -->
+      <div id="videoReviewScreen" class="is-hidden">
+        <div class="camera-body">
+          <video class="camera-video" id="videoReviewPlayer" controls playsinline></video>
+        </div>
+        <div class="camera-footer">
+          <button type="button" class="retake-btn" id="videoRetakeBtn">Retake</button>
+          <button type="button" class="use-photo-btn" id="useVideoBtn">Use Video</button>
+        </div>
+      </div>
+
       <!-- Result screen -->
       <div id="resultScreen" class="is-hidden">
         <div class="result-body" id="resultBody"></div>
@@ -523,12 +615,17 @@
   </div>
 
   <script>
-    const API_BASE = '/api';
+    const API_BASE = window.location.protocol === 'file:' ||
+      ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://127.0.0.1:5000'
+      : '/api';
     const MAX_PHOTOS = 4;
 
     const params = new URLSearchParams(window.location.search);
     const dept = params.get('dept');
     const section = params.get('section');
+    const year = ['1', '2', '3', '4'].includes(params.get('year')) ? params.get('year') : '2';
+    const yearLabel = { '1': 'First Year', '2': 'Second Year', '3': 'Third Year', '4': 'Fourth Year' }[year];
 
     const pageTitle = document.getElementById('pageTitle');
     const pageSub = document.getElementById('pageSub');
@@ -538,16 +635,13 @@
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
-    if (isAdmin && document.getElementById('registerPersonLink')) {
-      document.getElementById('registerPersonLink').style.display = 'inline-block';
-    }
 
     function loadPeople() {
       grid.innerHTML = '';
-      fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`)
+      fetch(`${API_BASE}/people?department=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}&year=${encodeURIComponent(year)}`)
         .then(res => res.json())
         .then(data => {
-          if (!data.success || !data.people || data.people.length === 0) {
+          if (!data.success || data.people.length === 0) {
             emptyState.style.display = 'block';
             return;
           }
@@ -619,7 +713,7 @@
       pageSub.textContent = 'Please go back and choose a department and section first.';
     } else {
       pageTitle.textContent = `${dept} — Section ${section}`;
-      pageSub.textContent = 'Registered students in this section.';
+      pageSub.textContent = `Registered students in this section for ${yearLabel}.`;
       loadPeople();
     }
 
@@ -637,6 +731,9 @@
         const mainScreen      = document.getElementById('mainScreen');
         const chooseCameraBtn = document.getElementById('chooseCameraBtn');
         const chooseGalleryBtn= document.getElementById('chooseGalleryBtn');
+        const chooseVideoBtn  = document.getElementById('chooseVideoBtn');
+        const chooseUploadVideoBtn = document.getElementById('chooseUploadVideoBtn');
+        const videoFileInput  = document.getElementById('videoFileInput');
         const queueHint        = document.getElementById('queueHint');
         const photoQueueEl     = document.getElementById('photoQueue');
         const submitAttendanceBtn = document.getElementById('submitAttendanceBtn');
@@ -646,11 +743,27 @@
         const statusEl       = document.getElementById('cameraStatus');
         const captureBtn     = document.getElementById('captureBtn');
         const cameraBackBtn  = document.getElementById('cameraBackBtn');
+        const cameraFlipBtn  = document.getElementById('cameraFlipBtn');
+        const cameraFacingLabel = document.getElementById('cameraFacingLabel');
 
         const reviewScreen   = document.getElementById('reviewScreen');
         const canvas         = document.getElementById('cameraCanvas');
         const retakeBtn      = document.getElementById('retakeBtn');
         const usePhotoBtn    = document.getElementById('usePhotoBtn');
+
+        const videoScreen       = document.getElementById('videoScreen');
+        const videoRecordPreview= document.getElementById('videoRecordPreview');
+        const videoStatus       = document.getElementById('videoStatus');
+        const videoRecordBtn    = document.getElementById('videoRecordBtn');
+        const videoBackBtn      = document.getElementById('videoBackBtn');
+        const videoFlipBtn      = document.getElementById('videoFlipBtn');
+        const videoFacingLabel  = document.getElementById('videoFacingLabel');
+        const videoTimerHint    = document.getElementById('videoTimerHint');
+
+        const videoReviewScreen = document.getElementById('videoReviewScreen');
+        const videoReviewPlayer = document.getElementById('videoReviewPlayer');
+        const videoRetakeBtn    = document.getElementById('videoRetakeBtn');
+        const useVideoBtn       = document.getElementById('useVideoBtn');
 
         const resultScreen   = document.getElementById('resultScreen');
         const resultBody     = document.getElementById('resultBody');
@@ -658,21 +771,58 @@
         const galleryInput   = document.getElementById('galleryInput');
         const fab             = document.getElementById('attendanceFab');
 
+        const RECORD_SECONDS = 10;
+
         let stream = null;
+        let currentFacingMode = 'environment'; // Default to BACK CAMERA for classroom attendance
         let photos = []; // { blob, previewUrl }
+        let mode = 'photos'; // 'photos' | 'video'
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedVideoBlob = null;
+        let recordedVideoUrl = null;
+        let recordTimeoutId = null;
+
+        function updateFacingLabels() {
+          const text = currentFacingMode === 'environment' ? 'Back Camera' : 'Front Camera';
+          if (cameraFacingLabel) cameraFacingLabel.textContent = text;
+          if (videoFacingLabel) videoFacingLabel.textContent = text;
+        }
 
         function showScreen(screen) {
-          [mainScreen, cameraScreen, reviewScreen, resultScreen].forEach(s => s.classList.add('is-hidden'));
+          [mainScreen, cameraScreen, reviewScreen, videoScreen, videoReviewScreen, resultScreen].forEach(s => s.classList.add('is-hidden'));
           screen.classList.remove('is-hidden');
         }
 
         function resetState() {
           photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
           photos = [];
+          mode = 'photos';
+          recordedVideoBlob = null;
+          if (recordedVideoUrl) {
+            URL.revokeObjectURL(recordedVideoUrl);
+            recordedVideoUrl = null;
+          }
           renderQueue();
         }
 
         function renderQueue() {
+          if (mode === 'video') {
+            photoQueueEl.innerHTML = '';
+            if (recordedVideoBlob) {
+              const szMb = (recordedVideoBlob.size / (1024 * 1024)).toFixed(1);
+              queueHint.innerHTML = `<strong>1</strong> classroom video selected (${szMb} MB).`;
+            } else {
+              queueHint.innerHTML = 'No video selected yet.';
+            }
+            chooseCameraBtn.disabled = false;
+            chooseGalleryBtn.disabled = false;
+            chooseVideoBtn.disabled = false;
+            if (chooseUploadVideoBtn) chooseUploadVideoBtn.disabled = false;
+            submitAttendanceBtn.disabled = !recordedVideoBlob;
+            return;
+          }
+
           photoQueueEl.innerHTML = '';
           photos.forEach((p, index) => {
             const thumb = document.createElement('div');
@@ -703,6 +853,8 @@
           const atMax = count >= MAX_PHOTOS;
           chooseCameraBtn.disabled = atMax;
           chooseGalleryBtn.disabled = atMax;
+          chooseVideoBtn.disabled = atMax;
+          if (chooseUploadVideoBtn) chooseUploadVideoBtn.disabled = atMax;
           submitAttendanceBtn.disabled = count < 1 || count > MAX_PHOTOS;
         }
 
@@ -715,47 +867,108 @@
 
         function closeOverlay() {
           overlay.classList.remove('is-open');
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+          clearTimeout(recordTimeoutId);
           stopCameraStream();
           resetState();
         }
 
         function stopCameraStream() {
           if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+            stream.getTracks().forEach(track => {
+              try { track.stop(); } catch (e) {}
+            });
             stream = null;
           }
         }
 
+        async function initCameraStream(facing, targetVideo, statusElement, actionButton) {
+          stopCameraStream();
+          currentFacingMode = facing;
+          updateFacingLabels();
+
+          statusElement.textContent = `Starting ${currentFacingMode === 'environment' ? 'back' : 'front'} camera…`;
+          statusElement.classList.remove('is-hidden');
+          if (actionButton) actionButton.classList.remove('is-hidden');
+
+          const attempts = [
+            { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
+            { video: { facingMode: currentFacingMode }, audio: false },
+            { video: true, audio: false }
+          ];
+
+          let lastErr = null;
+          for (const c of attempts) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia(c);
+              targetVideo.srcObject = stream;
+              statusElement.classList.add('is-hidden');
+              return stream;
+            } catch (err) {
+              lastErr = err;
+            }
+          }
+
+          console.error('Camera stream error:', lastErr);
+          statusElement.textContent = 'Camera access was denied or is unavailable. Please check permissions or use "Upload Photos / Video".';
+          statusElement.classList.remove('is-hidden');
+          if (actionButton) actionButton.classList.add('is-hidden');
+          return null;
+        }
+
+        async function toggleCameraFacing(targetVideo, statusElement, actionButton) {
+          const nextFacing = currentFacingMode === 'environment' ? 'user' : 'environment';
+          await initCameraStream(nextFacing, targetVideo, statusElement, actionButton);
+        }
+
         async function openCamera() {
+          mode = 'photos';
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
           overlayTitle.textContent = 'Take a Photo';
           showScreen(cameraScreen);
-          statusEl.textContent = 'Requesting camera access…';
-          statusEl.classList.remove('is-hidden');
-          captureBtn.classList.remove('is-hidden');
+          await initCameraStream(currentFacingMode || 'environment', video, statusEl, captureBtn);
+        }
 
+        function isCanvasBlankOrDark(cvs) {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: 'user' },
-              audio: false
-            });
-            video.srcObject = stream;
-            statusEl.classList.add('is-hidden');
-          } catch (err) {
-            console.error('Camera error:', err);
-            statusEl.textContent = 'Camera access was denied or is unavailable. Please allow camera permission, or use "Upload from Gallery" instead.';
-            statusEl.classList.remove('is-hidden');
-            captureBtn.classList.add('is-hidden');
+            const w = Math.min(cvs.width || 160, 160);
+            const h = Math.min(cvs.height || 120, 120);
+            const testCvs = document.createElement('canvas');
+            testCvs.width = w; testCvs.height = h;
+            const tCtx = testCvs.getContext('2d');
+            tCtx.drawImage(cvs, 0, 0, w, h);
+            const data = tCtx.getImageData(0, 0, w, h).data;
+            let sum = 0, sumSq = 0, count = data.length / 4;
+            for (let i = 0; i < data.length; i += 4) {
+              const g = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+              sum += g;
+              sumSq += g * g;
+            }
+            const mean = sum / count;
+            const variance = (sumSq / count) - (mean * mean);
+            return Math.sqrt(Math.max(0, variance)) < 11.0 || mean < 8 || mean > 248;
+          } catch (e) {
+            return false;
           }
         }
 
         function capturePhoto() {
           const ctx = canvas.getContext('2d');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth || 1280;
+          canvas.height = video.videoHeight || 720;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           stopCameraStream();
           overlayTitle.textContent = 'Review Photo';
           showScreen(reviewScreen);
+
+          if (isCanvasBlankOrDark(canvas)) {
+            alert('⚠️ Warning: The captured photo appears blank, solid-color, or completely dark. Please make sure students\' faces are visible in good lighting.');
+          }
         }
 
         function useCapturedPhoto() {
@@ -765,10 +978,15 @@
             overlayTitle.textContent = 'Mark Attendance';
             showScreen(mainScreen);
             renderQueue();
-          }, 'image/jpeg', 0.9);
+          }, 'image/jpeg', 0.92);
         }
 
         function openGallery() {
+          mode = 'photos';
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
           galleryInput.value = '';
           galleryInput.click();
         }
@@ -789,11 +1007,147 @@
           renderQueue();
         }
 
+        // ---------------- Video recording & Video upload ----------------
+
+        function pickRecorderMimeType() {
+          const candidates = [
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm',
+            'video/mp4'
+          ];
+          return candidates.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+        }
+
+        async function openVideoRecorder() {
+          mode = 'video';
+          photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+          photos = [];
+          if (recordedVideoBlob) {
+            recordedVideoBlob = null;
+            if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          }
+
+          overlayTitle.textContent = 'Record a Video';
+          showScreen(videoScreen);
+          videoRecordBtn.classList.remove('is-recording');
+          videoTimerHint.textContent = `Slowly pan across the room. Recording stops automatically after ${RECORD_SECONDS}s.`;
+
+          await initCameraStream(currentFacingMode || 'environment', videoRecordPreview, videoStatus, videoRecordBtn);
+        }
+
+        function startOrStopRecording() {
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            return;
+          }
+          if (!stream) return;
+
+          recordedChunks = [];
+          const mimeType = pickRecorderMimeType();
+          try {
+            mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+          } catch (err) {
+            console.error('MediaRecorder error:', err);
+            videoStatus.textContent = 'Video recording is not supported in this browser.';
+            videoStatus.classList.remove('is-hidden');
+            return;
+          }
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            clearTimeout(recordTimeoutId);
+            const blobType = mediaRecorder.mimeType || 'video/webm';
+            recordedVideoBlob = new Blob(recordedChunks, { type: blobType });
+            recordedVideoUrl = URL.createObjectURL(recordedVideoBlob);
+            stopCameraStream();
+
+            videoReviewPlayer.src = recordedVideoUrl;
+            overlayTitle.textContent = 'Review Video';
+            showScreen(videoReviewScreen);
+          };
+
+          mediaRecorder.start();
+          videoRecordBtn.classList.add('is-recording');
+          videoTimerHint.textContent = `Recording… will stop automatically in ${RECORD_SECONDS}s. Tap button to stop sooner.`;
+
+          recordTimeoutId = setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+              mediaRecorder.stop();
+            }
+          }, RECORD_SECONDS * 1000);
+        }
+
+        function handleVideoFileUpload(e) {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          mode = 'video';
+          photos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+          photos = [];
+          if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+
+          recordedVideoBlob = file;
+          recordedVideoUrl = URL.createObjectURL(file);
+          videoReviewPlayer.src = recordedVideoUrl;
+          overlayTitle.textContent = 'Review Video';
+          showScreen(videoReviewScreen);
+        }
+
+        function retakeVideo() {
+          if (recordedVideoUrl) { URL.revokeObjectURL(recordedVideoUrl); recordedVideoUrl = null; }
+          recordedVideoBlob = null;
+          openVideoRecorder();
+        }
+
+        function useRecordedVideo() {
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+          renderQueue();
+        }
+
+        // ---------------- Submit Attendance ----------------
+
         function submitAttendance() {
+          if (mode === 'video') {
+            if (!recordedVideoBlob) return;
+
+            submitAttendanceBtn.disabled = true;
+            submitAttendanceBtn.textContent = 'Recognizing faces…';
+
+            const formData = new FormData();
+            formData.append('department', dept);
+            formData.append('section', section);
+            formData.append('year', year);
+            const ext = (recordedVideoBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
+            formData.append('video', recordedVideoBlob, `attendance.${ext}`);
+
+            fetch(`${API_BASE}/mark-attendance-video`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+              body: formData
+            })
+              .then(res => res.json().then(data => ({ status: res.status, data })))
+              .then(({ status, data }) => {
+                submitAttendanceBtn.disabled = false;
+                submitAttendanceBtn.textContent = 'Submit Attendance';
+                showResult(data);
+              })
+              .catch(() => {
+                submitAttendanceBtn.disabled = false;
+                submitAttendanceBtn.textContent = 'Submit Attendance';
+                showResult({ success: false, message: 'Could not reach the server. Please check your network connection.' });
+              });
+            return;
+          }
+
           if (photos.length < 1 || photos.length > MAX_PHOTOS) return;
 
           submitAttendanceBtn.disabled = true;
-          submitAttendanceBtn.textContent = 'Submitting…';
+          submitAttendanceBtn.textContent = 'Recognizing faces…';
 
           const formData = new FormData();
           formData.append('department', dept);
@@ -808,8 +1162,8 @@
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
           })
-            .then(res => res.json())
-            .then(data => {
+            .then(res => res.json().then(data => ({ status: res.status, data })))
+            .then(({ status, data }) => {
               submitAttendanceBtn.disabled = false;
               submitAttendanceBtn.textContent = 'Submit Attendance';
               showResult(data);
@@ -817,17 +1171,23 @@
             .catch(() => {
               submitAttendanceBtn.disabled = false;
               submitAttendanceBtn.textContent = 'Submit Attendance';
-              showResult({ success: false, message: 'Could not reach the server.' });
+              showResult({ success: false, message: 'Could not reach the server. Please check your network connection.' });
             });
         }
 
         function showResult(data) {
-          overlayTitle.textContent = data.success ? 'Attendance Marked ✓' : 'Something went wrong';
+          overlayTitle.textContent = data.success ? 'Attendance Marked ✓' : 'Attendance Not Marked';
 
           if (!data.success) {
             resultBody.innerHTML = `
-              <p class="result-error">${data.message || 'The attendance photo(s) could not be processed.'}</p>
-              <button type="button" class="result-done-btn" id="resultDoneBtn">Close</button>
+              <div style="text-align:center; padding:16px 8px;">
+                <div style="width:52px; height:52px; border-radius:50%; background:#FBEAEA; color:#C0392B; display:inline-flex; align-items:center; justify-content:center; margin-bottom:12px;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <p class="result-error" style="font-weight:700; margin:0 0 8px; font-size:15px; color:#C0392B;">${data.message || 'No enrolled students were recognized.'}</p>
+                <p style="font-size:13px; color:#7a7265; margin:0 0 18px;">Attendance records were not changed. Please ensure students' faces are well-lit, clearly facing the camera, and enrolled with reference photos.</p>
+                <button type="button" class="result-done-btn" id="resultDoneBtn">Try Again</button>
+              </div>
             `;
           } else {
             const s = data.summary;
@@ -842,17 +1202,28 @@
                   <div class="result-stat-label">Absent</div>
                 </div>
               </div>
-              <p class="photo-queue-hint">Processed ${s.photos_processed} photo(s) · ${s.unknown_faces} unrecognized face(s).</p>
+              <p class="photo-queue-hint" style="text-align:center;">Processed ${s.photos_processed != null ? s.photos_processed + ' photo(s)' : s.frames_processed + ' video frame(s)'} · ${s.total_faces_detected || (s.present_count + (s.unknown_faces || 0))} face(s) detected · ${s.unknown_faces || 0} unrecognized.</p>
+              ${s.present_list && s.present_list.length ? `
+                <p class="result-list-title" style="color:#1E7E34; font-weight:700; margin-top:14px;">Present (${s.present_list.length})</p>
+                <p class="result-list">${s.present_list.map(p => `${p.name} (${p.reg_last4 || p.reg_number})`).join(', ')}</p>
+              ` : '<p class="result-list-title" style="color:#7a7265; font-style:italic;">No students marked present</p>'}
               ${s.absent_list && s.absent_list.length ? `
-                <p class="result-list-title">Absent</p>
-                <p class="result-list">${s.absent_list.join(', ')}</p>
+                <p class="result-list-title" style="color:#C0392B; font-weight:700; margin-top:10px;">Absent (${s.absent_list.length})</p>
+                <p class="result-list">${s.absent_list.map(p => `${p.name} (${p.reg_last4 || p.reg_number})`).join(', ')}</p>
               ` : ''}
-              <button type="button" class="result-done-btn" id="resultDoneBtn" style="margin-top:16px;">Done</button>
+              <button type="button" class="result-done-btn" id="resultDoneBtn" style="margin-top:18px;">Done</button>
             `;
           }
 
           showScreen(resultScreen);
-          document.getElementById('resultDoneBtn').addEventListener('click', closeOverlay);
+          document.getElementById('resultDoneBtn').addEventListener('click', () => {
+            if (data.success) {
+              closeOverlay();
+            } else {
+              overlayTitle.textContent = 'Mark Attendance';
+              showScreen(mainScreen);
+            }
+          });
         }
 
         fab.addEventListener('click', openOverlay);
@@ -861,7 +1232,24 @@
 
         chooseCameraBtn.addEventListener('click', openCamera);
         chooseGalleryBtn.addEventListener('click', openGallery);
+        chooseVideoBtn.addEventListener('click', openVideoRecorder);
+        if (chooseUploadVideoBtn) {
+          chooseUploadVideoBtn.addEventListener('click', () => {
+            videoFileInput.value = '';
+            videoFileInput.click();
+          });
+        }
+        if (videoFileInput) {
+          videoFileInput.addEventListener('change', handleVideoFileUpload);
+        }
         galleryInput.addEventListener('change', handleGalleryFiles);
+
+        if (cameraFlipBtn) {
+          cameraFlipBtn.addEventListener('click', () => toggleCameraFacing(video, statusEl, captureBtn));
+        }
+        if (videoFlipBtn) {
+          videoFlipBtn.addEventListener('click', () => toggleCameraFacing(videoRecordPreview, videoStatus, videoRecordBtn));
+        }
 
         cameraBackBtn.addEventListener('click', () => {
           stopCameraStream();
@@ -876,6 +1264,17 @@
           openCamera();
         });
         usePhotoBtn.addEventListener('click', useCapturedPhoto);
+
+        videoBackBtn.addEventListener('click', () => {
+          stopCameraStream();
+          clearTimeout(recordTimeoutId);
+          overlayTitle.textContent = 'Mark Attendance';
+          showScreen(mainScreen);
+        });
+        videoRecordBtn.addEventListener('click', startOrStopRecording);
+        videoRetakeBtn.addEventListener('click', retakeVideo);
+        useVideoBtn.addEventListener('click', useRecordedVideo);
+
         submitAttendanceBtn.addEventListener('click', submitAttendance);
       })();
     }
